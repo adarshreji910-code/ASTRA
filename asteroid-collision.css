@@ -1,0 +1,749 @@
+/* ==========================================================================
+   ASTRA — ASTEROID COLLISION
+   Aerospace Mission Control & Simulation UI Styling
+   Strictly Optimized to Match Storyboard Frames 1-10
+   ========================================================================== */
+
+.collision-experience {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5000;
+  background-color: #02050c;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s ease;
+}
+
+.collision-experience.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Ensure all interactive elements allow clicks & text inputs allow selection */
+.collision-experience input,
+.collision-experience select,
+.collision-experience textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.collision-experience button,
+.collision-experience canvas,
+.collision-experience .dark-glass-panel,
+.collision-experience .sim-home-btn,
+.collision-experience .sim-brand-btn,
+.collision-experience .sim-back-btn,
+.collision-experience .primary-cta-btn,
+.collision-experience .secondary-btn {
+  pointer-events: auto !important;
+}
+
+/* Simulation 3D WebGL Canvas */
+#collision-webgl-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   GLOBAL AEROSPACE NAVIGATION BAR
+   ========================================================================== */
+.sim-nav-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 14px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  background: linear-gradient(180deg, rgba(2, 6, 14, 0.94) 0%, rgba(2, 6, 14, 0) 100%);
+  pointer-events: auto !important;
+}
+
+.sim-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sim-brand-btn {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #ffffff;
+  text-align: left;
+  text-decoration: none;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+
+.sim-brand-btn:hover {
+  transform: translateY(-1px);
+}
+
+.sim-brand-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.sim-brand-subtitle {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #64d2ff;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+/* Prominent Dedicated Back to Home Button */
+.sim-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(100, 210, 255, 0.14);
+  border: 1px solid #64d2ff;
+  color: #64d2ff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 7px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(100, 210, 255, 0.22);
+  transition: all 0.25s ease;
+}
+
+.sim-home-btn:hover {
+  background: #64d2ff;
+  color: #020712;
+  box-shadow: 0 0 24px rgba(100, 210, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.sim-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 25, 42, 0.65);
+  border: 1px solid rgba(100, 210, 255, 0.25);
+  border-radius: 6px;
+  color: #8ca2b9;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.sim-back-btn:hover {
+  color: #ffffff;
+  border-color: #64d2ff;
+  background: rgba(20, 38, 64, 0.85);
+}
+
+/* Stage Breadcrumb Status Badge */
+.sim-stage-tracker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(8, 16, 30, 0.85);
+  border: 1px solid rgba(100, 210, 255, 0.2);
+  border-radius: 20px;
+  padding: 6px 16px;
+  backdrop-filter: blur(12px);
+}
+
+.tracker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00e699;
+  box-shadow: 0 0 8px #00e699;
+}
+
+.tracker-label {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: #64d2ff;
+  text-transform: uppercase;
+}
+
+.sim-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sim-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(14, 25, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8ca2b9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.sim-icon-btn:hover {
+  color: #64d2ff;
+  border-color: rgba(100, 210, 255, 0.4);
+}
+
+/* Dim header in cinematic mode */
+.sim-nav-header.cinematic-dim {
+  opacity: 0.25;
+  transition: opacity 0.5s ease;
+}
+.sim-nav-header.cinematic-dim:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   STAGE VIEWS CONTAINER
+   ========================================================================== */
+.sim-stage-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.sim-stage-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  opacity: 0;
+  pointer-events: auto !important;
+  transition: opacity 0.3s ease;
+}
+
+.sim-stage-view.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* Glass Panels Common */
+.dark-glass-panel {
+  background: rgba(6, 14, 26, 0.85);
+  border: 1px solid rgba(100, 210, 255, 0.2);
+  border-radius: 10px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+  pointer-events: auto !important;
+}
+
+/* Common Primary Button */
+.primary-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #64d2ff 0%, #1f80d6 100%);
+  color: #020712;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 11px 24px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(100, 210, 255, 0.4);
+  transition: all 0.25s ease;
+  pointer-events: auto !important;
+}
+
+.primary-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(100, 210, 255, 0.65);
+}
+
+.secondary-btn {
+  background: rgba(14, 28, 48, 0.75);
+  border: 1px solid rgba(100, 210, 255, 0.25);
+  color: #8ca2b9;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  pointer-events: auto !important;
+}
+
+.secondary-btn:hover {
+  color: #ffffff;
+  border-color: #64d2ff;
+  background: rgba(20, 42, 70, 0.9);
+}
+
+/* Badges */
+.scientific-badge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.badge-observed {
+  background: rgba(0, 230, 153, 0.15);
+  color: #00e699;
+  border: 1px solid rgba(0, 230, 153, 0.35);
+}
+
+.badge-estimated {
+  background: rgba(100, 210, 255, 0.15);
+  color: #64d2ff;
+  border: 1px solid rgba(100, 210, 255, 0.35);
+}
+
+.badge-assumption {
+  background: rgba(255, 170, 51, 0.15);
+  color: #ffaa33;
+  border: 1px solid rgba(255, 170, 51, 0.35);
+}
+
+/* ==========================================================================
+   FRAME 1: COCKPIT HUD (MATCHING STORYBOARD PANEL 1)
+   ========================================================================== */
+#view-intro {
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 68px 30px 28px 30px;
+}
+
+.cockpit-frame-container {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 20px;
+  width: 100%;
+  height: calc(100% - 60px);
+}
+
+.cockpit-monitor {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.monitor-header {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #64d2ff;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(100, 210, 255, 0.2);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.hud-data-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  margin-bottom: 10px;
+}
+
+.hud-data-label {
+  color: #8ca2b9;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hud-data-val {
+  font-family: 'Space Grotesk', monospace;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cockpit-center-viewport {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 30px;
+  text-align: center;
+}
+
+.cockpit-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  line-height: 1.15;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
+}
+
+.cockpit-desc {
+  font-size: 12px;
+  color: #8ca2b9;
+  max-width: 560px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+/* ==========================================================================
+   FRAME 4: ASTEROID PARAMETERS DASHBOARD (STORYBOARD PANEL 4)
+   ========================================================================== */
+#view-parameters {
+  padding: 68px 30px 24px 30px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.parameters-main-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 22px;
+  height: calc(100% - 50px);
+}
+
+.param-rock-col {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.param-rock-view {
+  width: 100%;
+  height: 230px;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 210, 255, 0.18);
+  background: radial-gradient(circle at 50% 50%, rgba(15, 38, 65, 0.35) 0%, rgba(2, 6, 14, 0.9) 75%);
+}
+
+.param-data-col {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+}
+
+/* Asteroid Selector Bar */
+.asteroid-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.asteroid-select-input {
+  background: #091728;
+  border: 1px solid rgba(100, 210, 255, 0.3);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  flex: 1;
+}
+
+/* Custom Parameter Sliders */
+#custom-params-sliders-wrap {
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px;
+  background: rgba(10, 24, 44, 0.5);
+  border: 1px dashed rgba(100, 210, 255, 0.3);
+  border-radius: 8px;
+}
+
+.param-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.param-metric-card {
+  background: rgba(10, 24, 44, 0.6);
+  border: 1px solid rgba(100, 210, 255, 0.15);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.param-metric-title {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #8ca2b9;
+  text-transform: uppercase;
+}
+
+.param-metric-number {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 5px 0 2px 0;
+}
+
+.param-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.param-chart-card {
+  background: rgba(10, 24, 44, 0.6);
+  border: 1px solid rgba(100, 210, 255, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.orbital-telemetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.orbital-telemetry-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(100, 210, 255, 0.08);
+}
+
+/* ==========================================================================
+   FRAME 5 & 6: 2D FLAT SCIENTIFIC EARTH TARGET MAP (STORYBOARD PANEL 5 & 6)
+   ========================================================================== */
+#view-target-map {
+  flex-direction: column;
+  padding: 0;
+}
+
+.target-map-fullscreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+}
+
+#earth-target-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  display: block;
+}
+
+/* Top-Left Target Label (Panel 6 Match) */
+.map-top-hud {
+  position: absolute;
+  top: 76px;
+  left: 30px;
+  z-index: 30;
+  padding: 10px 18px;
+  border-color: #64d2ff;
+  pointer-events: auto !important;
+}
+
+.map-top-hud-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #64d2ff;
+}
+
+/* Clean Bottom Targeting HUD (Panel 6 Match) */
+.map-bottom-bar {
+  position: absolute;
+  bottom: 22px;
+  left: 30px;
+  right: 30px;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.map-live-coords {
+  padding: 12px 18px;
+  pointer-events: auto !important;
+}
+
+.live-coords-text {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #64d2ff;
+  letter-spacing: 0.12em;
+  margin: 4px 0;
+}
+
+.map-target-action-box {
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  pointer-events: auto !important;
+  border-color: #64d2ff;
+  box-shadow: 0 0 24px rgba(100, 210, 255, 0.25);
+}
+
+.map-preset-select {
+  background: #091728;
+  border: 1px solid rgba(100, 210, 255, 0.3);
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+}
+
+/* ==========================================================================
+   FRAME 7 & 8: ORBITAL APPROACH & ENTRY TELEMETRY HUD (PANEL 7 & 8)
+   ========================================================================== */
+#view-approach-hud {
+  padding: 68px 30px 30px 30px;
+  justify-content: space-between;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.flight-telemetry-hud {
+  position: absolute;
+  top: 76px;
+  left: 30px;
+  width: 280px;
+  padding: 18px;
+}
+
+.telemetry-big-number {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.approach-countdown-pill {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  background: rgba(6, 14, 26, 0.9);
+  border: 1px solid rgba(255, 170, 51, 0.5);
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.countdown-digits {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffaa33;
+}
+
+/* ==========================================================================
+   FRAME 10: SCIENTIFIC RESULTS TELEMETRY REPORT (PANEL 10)
+   ========================================================================== */
+#view-results {
+  padding: 68px 30px 24px 30px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+}
+
+.results-columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin: 14px 0;
+}
+
+.results-metric-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.results-big-stat {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 5px 0;
+}
+
+.results-bottom-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(100, 210, 255, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .cockpit-frame-container {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .parameters-main-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .results-columns-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTRA — Live Satellite Data</title>
+  <meta name="description" content="Explore public space & Earth-observation satellite data sources across NASA, Copernicus, ISRO, USGS, and more.">
+  
+  <!-- Typography matching ASTRA Design System -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #000206;
+      --panel-border: rgba(100, 210, 255, 0.35);
+      --panel-border-hover: rgba(100, 210, 255, 0.75);
+      --card-bg: rgba(6, 14, 26, 0.94);
+      --card-border: rgba(100, 210, 255, 0.32);
+      --card-border-hover: rgba(100, 210, 255, 0.85);
+      --accent-cyan: #64d2ff;
+      --accent-cyan-glow: rgba(100, 210, 255, 0.45);
+      --text-main: #ffffff;
+      --text-muted: #8ca2b9;
+      --text-dim: #5c6f85;
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-display);
+      overflow-x: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Ambient Outer Space Atmosphere */
+    .viewport-outer-wrapper {
+      width: 100vw;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 50%, #030816 0%, #000206 100%);
+      padding: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Main Aerospace Cockpit Stage (1280x714 matching reference) */
+    .cockpit-stage {
+      position: relative;
+      width: 1280px;
+      height: 714px;
+      flex-shrink: 0;
+      background: #000206 url('assets/satellite-cockpit-bg.jpg') no-repeat center center;
+      background-size: 100% 100%;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+      transform-origin: center center;
+      transition: transform 0.15s ease-out;
+    }
+
+    /* Clickable ASTRA Top Notch Brand Hitbox */
+    .brand-hitbox {
+      position: absolute;
+      top: 10px;
+      left: 470px;
+      width: 340px;
+      height: 52px;
+      display: block;
+      cursor: pointer;
+      z-index: 30;
+      border-radius: 4px;
+    }
+
+    /* Dedicated "← BACK TO HOME" Navigation Button */
+    .btn-back-home {
+      position: absolute;
+      left: 126px;
+      top: 67px;
+      width: 95px;
+      height: 23px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: rgba(12, 22, 38, 0.75);
+      border: 1px solid rgba(100, 210, 255, 0.5);
+      border-radius: 5px;
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      cursor: pointer;
+      z-index: 35;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+      transition: all 0.22s ease;
+      white-space: nowrap;
+    }
+
+    .btn-back-home:hover {
+      background: rgba(100, 210, 255, 0.25);
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 16px var(--accent-cyan-glow);
+      transform: translateY(-1px);
+    }
+
+    /* Hidden accessible header for SEO / Screen Readers */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* 10-Card Precision Grid */
+    .cards-grid {
+      position: absolute;
+      left: 127px;
+      top: 189px;
+      width: 1027px;
+      display: grid;
+      grid-template-columns: repeat(5, 191px);
+      column-gap: 18px;
+      row-gap: 22px;
+      z-index: 20;
+    }
+
+    /* Individual Satellite Feature Card */
+    .sat-card {
+      width: 191px;
+      height: 233px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 7px;
+      padding: 7px 8px 8px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(16px);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Row 2 cards height matching bezel */
+    .cards-grid > .sat-card:nth-child(n+6) {
+      height: 224px;
+    }
+
+    .sat-card:hover {
+      border-color: var(--card-border-hover);
+      box-shadow: 0 0 22px rgba(100, 210, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.85);
+      transform: translateY(-2px);
+    }
+
+    /* Card Visual Thumbnail Container */
+    .card-visual {
+      width: 100%;
+      height: 82px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(100, 210, 255, 0.25);
+      position: relative;
+      flex-shrink: 0;
+      background: #02060f;
+    }
+
+    .card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .sat-card:hover .card-img {
+      transform: scale(1.03);
+    }
+
+    /* Card Text Content Area */
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 2px;
+    }
+
+    .status-dot {
+      width: 4.5px;
+      height: 4.5px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--accent-cyan);
+      display: inline-block;
+    }
+
+    .status-text {
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #a0b4cb;
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #ffffff;
+      text-transform: uppercase;
+      line-height: 1.15;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-desc {
+      font-family: var(--font-body);
+      font-size: 8.5px;
+      color: var(--text-muted);
+      line-height: 1.25;
+      margin-bottom: 4px;
+    }
+
+    .card-courtesy {
+      margin-top: auto;
+      border-top: 1px solid rgba(100, 210, 255, 0.12);
+      padding-top: 3px;
+    }
+
+    .courtesy-label {
+      font-size: 7px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: block;
+      line-height: 1;
+    }
+
+    .courtesy-val {
+      font-size: 8px;
+      color: #a0b4cb;
+      display: block;
+      margin-top: 2px;
+      line-height: 1;
+    }
+
+    /* "OPEN LIVE SOURCE ↗" Action Button */
+    .card-btn {
+      width: 100%;
+      padding: 5px 8px;
+      background: rgba(10, 26, 48, 0.72);
+      border: 1px solid rgba(100, 210, 255, 0.45);
+      border-radius: 5px;
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      margin-top: 5px;
+      transition: all 0.22s ease;
+      outline: none;
+    }
+
+    .sat-card:hover .card-btn,
+    .card-btn:hover {
+      background: rgba(100, 210, 255, 0.3);
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 14px var(--accent-cyan-glow);
+    }
+
+    .card-btn:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="viewport-outer-wrapper">
+    <div class="cockpit-stage" id="cockpit-stage">
+
+      <!-- Top Center Brand Hitbox (Navigates to index.html) -->
+      <a href="index.html" class="brand-hitbox" title="Return to ASTRA Home" aria-label="ASTRA Home"></a>
+
+      <!-- Dedicated "← BACK TO HOME" Button -->
+      <a href="index.html" class="btn-back-home" id="btn-back-home" title="Return to ASTRA Home">
+        <span>← BACK TO HOME</span>
+      </a>
+
+      <!-- Accessible Header -->
+      <header class="sr-only">
+        <h1>LIVE SATELLITE DATA</h1>
+        <p>PUBLIC SPACE &amp; EARTH-OBSERVATION SOURCES</p>
+      </header>
+
+      <!-- 10 Live Satellite Cards Grid -->
+      <main class="cards-grid" role="region" aria-label="Satellite Data Sources">
+
+        <!-- CARD 1: NASA WORLDVIEW -->
+        <article class="sat-card" id="card-nasa-worldview" data-url="https://worldview.earthdata.nasa.gov/" title="Open NASA Worldview">
+          <div class="card-visual">
+            <img src="assets/sat-nasa-worldview.png" alt="NASA Worldview Orbit Visualization" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">NASA WORLDVIEW</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-nasa-worldview" data-url="https://worldview.earthdata.nasa.gov/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 2: COPERNICUS BROWSER -->
+        <article class="sat-card" id="card-copernicus" data-url="https://browser.dataspace.copernicus.eu/" title="Open Copernicus Browser">
+          <div class="card-visual">
+            <img src="assets/sat-copernicus-browser.png" alt="Copernicus Browser Sentinel Imagery" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">COPERNICUS BROWSER</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-copernicus" data-url="https://browser.dataspace.copernicus.eu/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 3: USGS EARTH EXPLORER -->
+        <article class="sat-card" id="card-usgs" data-url="https://earthexplorer.usgs.gov/" title="Open USGS Earth Explorer">
+          <div class="card-visual">
+            <img src="assets/sat-usgs-earth-explorer.png" alt="USGS Earth Explorer Landsat Imagery" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">USGS EARTH EXPLORER</h2>
+            <p class="card-desc">Landsat data near-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-usgs" data-url="https://earthexplorer.usgs.gov/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 4: ISRO -->
+        <article class="sat-card" id="card-isro" data-url="https://www.isro.gov.in/" title="Open ISRO Official Portal">
+          <div class="card-visual">
+            <img src="assets/sat-isro.png" alt="ISRO Missions and Space Feeds" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">ISRO</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-isro" data-url="https://www.isro.gov.in/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 5: NASA SPACE -->
+        <article class="sat-card" id="card-nasa-space" data-url="https://www.nasa.gov/" title="Open NASA Space Portal">
+          <div class="card-visual">
+            <img src="assets/sat-nasa-space.png" alt="NASA Space Exploration Feed" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">NASA SPACE</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-nasa-space" data-url="https://www.nasa.gov/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 6: N2YO -->
+        <article class="sat-card" id="card-n2yo" data-url="https://www.n2yo.com/" title="Open N2YO Live Satellite Tracking">
+          <div class="card-visual">
+            <img src="assets/sat-n2yo.png" alt="N2YO Live Satellite Tracking Positions" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">N2YO</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-n2yo" data-url="https://www.n2yo.com/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 7: HEAVENS-ABOVE -->
+        <article class="sat-card" id="card-heavens-above" data-url="https://www.heavens-above.com/" title="Open Heavens-Above Passes">
+          <div class="card-visual">
+            <img src="assets/sat-heavens-above.png" alt="Heavens-Above Satellite Passes Tracker" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">HEAVENS-ABOVE</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-heavens-above" data-url="https://www.heavens-above.com/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 8: NASA SPOT THE STATION -->
+        <article class="sat-card" id="card-spot-the-station" data-url="https://spotthestation.nasa.gov/" title="Open NASA Spot The Station">
+          <div class="card-visual">
+            <img src="assets/sat-nasa-spot-the-station.png" alt="NASA Spot The Station ISS Tracker" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">NASA SPOT THE STATION</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-spot-the-station" data-url="https://spotthestation.nasa.gov/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 9: CELESTRAK -->
+        <article class="sat-card" id="card-celestrak" data-url="https://celestrak.org/" title="Open CelesTrak Orbit Telemetry">
+          <div class="card-visual">
+            <img src="assets/sat-celestrak.png" alt="CelesTrak Satellite Orbits and Telemetry" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">CELESTRAK</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-celestrak" data-url="https://celestrak.org/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+        <!-- CARD 10: SATELLITEMAP -->
+        <article class="sat-card" id="card-satellitemap" data-url="https://satellitemap.space/" title="Open SatelliteMap Space">
+          <div class="card-visual">
+            <img src="assets/sat-satellitemap.png" alt="SatelliteMap Space Constellations" class="card-img" />
+          </div>
+          <div class="card-body">
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span class="status-text">LIVE / DATA SOURCE</span>
+            </div>
+            <h2 class="card-title">SATELLITEMAP</h2>
+            <p class="card-desc">Near real-time satellite imagery</p>
+            <div class="card-courtesy">
+              <span class="courtesy-label">SOURCE / COURTESY</span>
+              <span class="courtesy-val">Official organization</span>
+            </div>
+          </div>
+          <button type="button" class="card-btn" id="btn-satellitemap" data-url="https://satellitemap.space/">
+            <span>OPEN LIVE SOURCE ↗</span>
+          </button>
+        </article>
+
+      </main>
+
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // Clean browser redirection in the SAME tab
+      function redirectToSource(url, event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        if (url) {
+          window.location.href = url;
+        }
+      }
+
+      // Attach navigation to each card
+      document.querySelectorAll('.sat-card').forEach(function (card) {
+        var url = card.getAttribute('data-url');
+        card.addEventListener('click', function (event) {
+          // If clicked directly on the button, let the button handler fire
+          if (event.target.closest('.card-btn')) return;
+          redirectToSource(url, event);
+        });
+      });
+
+      // Attach navigation to each button
+      document.querySelectorAll('.card-btn').forEach(function (btn) {
+        var url = btn.getAttribute('data-url') || btn.closest('.sat-card').getAttribute('data-url');
+        btn.addEventListener('click', function (event) {
+          redirectToSource(url, event);
+        });
+      });
+
+      // BACK TO HOME button handler
+      document.getElementById('btn-back-home')?.addEventListener('click', function (event) {
+        event.preventDefault();
+        window.location.href = 'index.html';
+      });
+
+      // Responsive viewport auto-scaling for MacBook and varied resolutions
+      function fitCockpitStage() {
+        var stage = document.getElementById('cockpit-stage');
+        if (!stage) return;
+        var targetW = 1280;
+        var targetH = 714;
+        var winW = window.innerWidth;
+        var winH = window.innerHeight;
+        // Proportionally scale to fit cleanly inside viewport
+        var scale = Math.min(winW / targetW, winH / targetH);
+        if (scale > 1.35) scale = 1.35;
+        stage.style.transform = 'scale(' + scale + ')';
+      }
+
+      window.addEventListener('resize', fitCockpitStage);
+      window.addEventListener('DOMContentLoaded', fitCockpitStage);
+      fitCockpitStage();
+    })();
+  </script>
+
+</body>
+</html>

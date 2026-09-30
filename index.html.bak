@@ -1,0 +1,3375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTRA — Explore The Universe</title>
+  <meta name="description" content="ASTRA is an immersive space-exploration dashboard. Explore planets, galaxies, cosmic events and the mysteries beyond Earth.">
+  
+  <!-- Modern Clean Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Three.js Stable Engine CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- ASTRA Asteroid Collision Stylesheet -->
+  <link rel="stylesheet" href="css/asteroid-collision.css">
+
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & CINEMATIC PALETTE (MATCHING MASTER REFERENCE)
+       ========================================================================== */
+    :root {
+      --bg-color: #020409;
+      --panel-bg: rgba(9, 15, 25, 0.44);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-border-hover: rgba(100, 210, 255, 0.28);
+      --card-bg: rgba(12, 19, 30, 0.52);
+      --card-border: rgba(255, 255, 255, 0.065);
+      --card-border-hover: rgba(100, 210, 255, 0.38);
+      --text-main: #ffffff;
+      --text-muted: #8ca2b9;
+      --text-dim: #516277;
+      --accent-cyan: #64d2ff;
+      --accent-cyan-glow: rgba(100, 210, 255, 0.4);
+      --accent-green: #00e699;
+      --accent-amber: #ffaa33;
+      
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      
+      --glass-blur: blur(28px);
+      --panel-radius: 14px;
+      --card-radius: 10px;
+      --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      user-select: none;
+    }
+
+    /* ==========================================================================
+       THREE.JS WEBGL CANVAS (EARTH & SPACE)
+       ========================================================================== */
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Ambient Space Dust & Soft Nebula Haze in Space */
+    .space-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 45% 18%, rgba(20, 48, 85, 0.28) 0%, transparent 55%),
+        radial-gradient(circle at 82% 12%, rgba(12, 30, 56, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at 20% 40%, rgba(15, 35, 65, 0.2) 0%, transparent 50%),
+        #020409;
+      pointer-events: none;
+    }
+
+    /* ==========================================================================
+       PAGE CONTAINER & UI OVERLAY
+       ========================================================================== */
+    .app-viewport {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 32px 52px 36px 52px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .interactive-element {
+      pointer-events: auto;
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION (EXACT MASTER MATCH)
+       ========================================================================== */
+    .site-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 20;
+    }
+
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--text-main);
+      text-transform: uppercase;
+      line-height: 1;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+    }
+
+    .brand-tagline {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.26em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 6px;
+      transition: color 0.3s ease;
+    }
+
+    .brand-group:hover .brand-tagline {
+      color: var(--accent-cyan);
+    }
+
+    .site-nav {
+      display: flex;
+      align-items: center;
+      gap: 34px;
+      margin-top: 2px;
+    }
+
+    .nav-link {
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-decoration: none;
+      position: relative;
+      padding: 6px 2px;
+      transition: color 0.25s ease;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+    }
+
+    .nav-link.active {
+      color: var(--text-main);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan-glow);
+      border-radius: 2px;
+    }
+
+    .nav-extras {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-left: 12px;
+      border-left: 1px solid var(--panel-border);
+      padding-left: 18px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, transform 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: var(--accent-cyan);
+      transform: scale(1.1);
+    }
+
+    /* ==========================================================================
+       MAIN CONTENT LAYOUT (SPLIT HERO + DASHBOARD PANELS)
+       ========================================================================== */
+    .main-stage {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) 640px;
+      gap: 36px;
+      align-items: flex-end;
+      padding-bottom: 6px;
+      z-index: 15;
+    }
+
+    /* ==========================================================================
+       HERO SECTION (LEFT COLUMN - IN DEEP SPACE ABOVE EARTH'S LIMB)
+       ========================================================================== */
+    .hero-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 480px;
+      margin-bottom: 26px;
+      pointer-events: auto;
+    }
+
+    .orbit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(8, 14, 24, 0.72);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(100, 210, 255, 0.22);
+      width: fit-content;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .live-dot {
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse-live 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-live {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    .badge-text {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: #dbe7f5;
+      text-transform: uppercase;
+    }
+
+    .satellite-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--accent-amber);
+      box-shadow: 0 0 8px var(--accent-amber);
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(38px, 4.4vw, 64px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
+      text-transform: uppercase;
+      margin-bottom: 22px;
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.9);
+    }
+
+    .hero-subtitle {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      max-width: 420px;
+      margin-bottom: 34px;
+      font-weight: 400;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: #ffffff;
+      color: #020409;
+      font-family: var(--font-body);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      width: fit-content;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, background 0.25s ease;
+      box-shadow: 0 4px 25px rgba(255, 255, 255, 0.22), 0 0 40px rgba(100, 210, 255, 0.15);
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 32px rgba(255, 255, 255, 0.35), 0 0 50px rgba(100, 210, 255, 0.3);
+      background: #f0f7ff;
+    }
+
+    .cta-button .arrow {
+      font-size: 14px;
+      transition: transform 0.25s ease;
+    }
+
+    .cta-button:hover .arrow {
+      transform: translateX(4px);
+    }
+
+    /* ==========================================================================
+       RIGHT COLUMN (TOP PANELS + FEATURE CARD VIEWER)
+       ========================================================================== */
+    .dashboard-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      pointer-events: auto;
+      width: 640px;
+      margin-left: auto;
+    }
+
+    /* ==========================================================================
+       TOP PANELS ROW: LATEST FROM SPACE + UPCOMING
+       ========================================================================== */
+    .top-panels-row {
+      display: grid;
+      grid-template-columns: 384px 240px;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--panel-radius);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      transition: var(--transition-smooth);
+    }
+
+    .glass-panel:hover {
+      border-color: var(--panel-border-hover);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55), 0 0 24px rgba(100, 210, 255, 0.08);
+    }
+
+    /* Latest News Panel */
+    .news-panel {
+      padding: 15px 18px 14px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header-title {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .news-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .news-item {
+      display: grid;
+      grid-template-columns: 46px 1fr 34px;
+      gap: 12px;
+      align-items: center;
+      padding: 3px 2px;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .news-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .news-thumb {
+      width: 46px;
+      height: 35px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #08111e;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .news-text {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .news-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .news-meta {
+      font-size: 9px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .news-badge-img {
+      width: 32px;
+      height: 25px;
+      border-radius: 4px;
+      object-fit: cover;
+      opacity: 0.85;
+      justify-self: end;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Upcoming Events Panel */
+    .upcoming-panel {
+      padding: 15px 18px 14px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .upcoming-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .upcoming-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 3px 2px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .upcoming-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .upcoming-visual {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .upcoming-visual.eclipse {
+      background: radial-gradient(circle, #020408 48%, #ffaa33 55%, transparent 68%);
+      box-shadow: 0 0 10px rgba(255, 170, 51, 0.4);
+    }
+
+    .upcoming-visual.meteor {
+      background: radial-gradient(circle, #64d2ff 10%, #153860 60%, transparent 80%);
+      box-shadow: 0 0 10px rgba(100, 210, 255, 0.4);
+    }
+
+    .upcoming-visual.planets {
+      background: radial-gradient(circle, #ffd166 20%, #994422 65%, transparent 75%);
+      box-shadow: 0 0 10px rgba(255, 209, 102, 0.3);
+    }
+
+    .upcoming-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .upcoming-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.25;
+    }
+
+    .upcoming-date {
+      font-size: 9px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       MAIN FEATURE CARD VIEWPORT / CAROUSEL
+       ========================================================================== */
+    .feature-panel {
+      position: relative;
+      padding: 18px 20px 16px 20px;
+      background: var(--panel-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--panel-radius);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 640px;
+    }
+
+    .feature-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .feature-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-title {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      transition: opacity 0.2s ease;
+    }
+
+    .set-indicators {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .set-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .set-dot.active {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+      width: 14px;
+      border-radius: 999px;
+    }
+
+    .scroll-hint {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scroll-hint-arrow {
+      animation: float-down 1.8s infinite ease-in-out;
+    }
+
+    @keyframes float-down {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(3px); }
+    }
+
+    /* Card Grid & Carousel Stage */
+    .feature-stage-wrap {
+      display: flex;
+      position: relative;
+      gap: 12px;
+    }
+
+    .cards-grid-container {
+      flex: 1;
+      position: relative;
+      height: 338px;
+      overflow: hidden;
+    }
+
+    .card-set {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(3, 102px);
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(30px) scale(0.98);
+      filter: blur(8px);
+      transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                  opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                  filter 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .card-set.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+
+    .card-set.exit-up {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-30px) scale(0.98);
+      filter: blur(8px);
+    }
+
+    .card-set.exit-down {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(30px) scale(0.98);
+      filter: blur(8px);
+    }
+
+    /* Individual Feature Card (Matching master screenshot) */
+    .feature-card {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.3s ease,
+                  box-shadow 0.3s ease,
+                  background-color 0.3s ease;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.08), transparent 40%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px) scale(1.015);
+      border-color: var(--card-border-hover);
+      background: rgba(16, 26, 40, 0.75);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(100, 210, 255, 0.12);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 58%;
+      z-index: 2;
+    }
+
+    .card-title {
+      font-family: var(--font-body);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-main);
+      text-transform: uppercase;
+      line-height: 1.25;
+      margin-bottom: 4px;
+    }
+
+    .card-desc {
+      font-size: 9.5px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    .card-visual {
+      width: 98px;
+      height: 78px;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      z-index: 1;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+      background: #040913;
+    }
+
+    .card-visual canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.5s ease;
+    }
+
+    .feature-card:hover .card-visual canvas {
+      transform: scale(1.08);
+    }
+
+    /* Sleek Vertical Scroll Indicator Track (Right Edge) */
+    .vertical-scrollbar {
+      width: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      position: relative;
+      cursor: pointer;
+      margin-left: 2px;
+      height: 338px;
+    }
+
+    .scrollbar-thumb {
+      width: 100%;
+      height: 33.333%;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 4px;
+      position: absolute;
+      top: 33.333%; /* Default to Set 1 (Featured) */
+      left: 0;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+      transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+    }
+
+    .vertical-scrollbar:hover .scrollbar-thumb {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--accent-cyan-glow);
+    }
+
+    /* ==========================================================================
+       MISSION DOSSIER / INTERACTIVE MODAL DIALOG
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 6, 14, 0.82);
+      backdrop-filter: blur(28px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-window {
+      width: min(640px, 92vw);
+      background: rgba(11, 18, 30, 0.95);
+      border: 1px solid rgba(100, 210, 255, 0.3);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(100, 210, 255, 0.15);
+      transform: scale(0.92) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .modal-overlay.open .modal-window {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .modal-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+
+    .modal-body {
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .modal-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-top: 4px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .modal-btn-secondary {
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+
+    .modal-btn-primary {
+      padding: 10px 24px;
+      border-radius: 999px;
+      background: var(--accent-cyan);
+      color: #030710;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 20px var(--accent-cyan-glow);
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 30px var(--accent-cyan-glow);
+      background: #89e0ff;
+    }
+
+    /* ==========================================================================
+       RESPONSIVE BREAKPOINTS
+       ========================================================================== */
+    @media (max-width: 1280px) {
+      .app-viewport {
+        padding: 24px 36px 26px 36px;
+      }
+      .main-stage {
+        grid-template-columns: 1fr 600px;
+        gap: 24px;
+      }
+      .dashboard-container, .feature-panel {
+        width: 600px;
+      }
+      .top-panels-row {
+        grid-template-columns: 360px 224px;
+      }
+    }
+
+    @media (max-width: 1080px) {
+      html, body {
+        overflow-y: auto;
+        user-select: auto;
+      }
+      .app-viewport {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+        padding: 24px;
+        gap: 40px;
+      }
+      .main-stage {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+      }
+      .hero-container {
+        max-width: 600px;
+        margin-bottom: 24px;
+      }
+      .dashboard-container, .feature-panel {
+        margin-left: 0;
+        width: 100%;
+        max-width: 650px;
+      }
+      .top-panels-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .site-header {
+        flex-direction: column;
+        gap: 16px;
+      }
+      .site-nav {
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .top-panels-row {
+        grid-template-columns: 1fr;
+      }
+      .card-set {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(6, 92px);
+        height: 610px;
+      }
+      .cards-grid-container, .vertical-scrollbar {
+        height: 610px;
+      }
+    }
+
+    /* Accessibility: Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Space Dust Gradients -->
+  <div class="space-backdrop"></div>
+
+  <!-- Three.js WebGL Container -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- Main Viewport Overlay -->
+  <div class="app-viewport">
+    
+    <!-- Top Site Header (Exact Master Reference) -->
+    <header class="site-header interactive-element">
+      <a href="#" class="brand-group" id="brand-link" title="ASTRA - Space Exploration Dashboard">
+        <span class="brand-logo">ASTRA</span>
+        <span class="brand-tagline">EXPLORE THE UNIVERSE</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="#home" class="nav-link active" data-nav="home">HOME</a>
+        <a href="#explore" class="nav-link" data-nav="explore">EXPLORE</a>
+        <a href="#events" class="nav-link" data-nav="events">EVENTS</a>
+        <a href="#games" class="nav-link" data-nav="games">GAMES</a>
+        <a href="#about" class="nav-link" data-nav="about">ABOUT</a>
+
+        <div class="nav-extras">
+          <button class="icon-btn" id="audio-toggle" title="Toggle Ambient Orbit Sound" aria-label="Toggle Sound">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+          </button>
+          <button class="icon-btn" id="fs-toggle" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Hero & Dashboard Area -->
+    <main class="main-stage">
+      
+      <!-- Hero Left Area (In Deep Space Above Earth's Limb) -->
+      <section class="hero-container interactive-element">
+        <div class="orbit-badge">
+          <span class="live-dot"></span>
+          <span class="badge-text">LIVE • EARTH ORBIT</span>
+          <span class="satellite-dot"></span>
+        </div>
+
+        <h1 class="hero-title">
+          THE UNIVERSE<br>
+          IS CLOSER THAN<br>
+          YOU THINK.
+        </h1>
+
+        <p class="hero-subtitle">
+          Explore planets, galaxies, cosmic events<br>and the mysteries beyond Earth.
+        </p>
+
+        <a href="#explore" class="cta-button" id="start-explore-btn">
+          <span>START EXPLORING</span>
+          <span class="arrow">→</span>
+        </a>
+      </section>
+
+      <!-- Right Dashboard Area -->
+      <section class="dashboard-container interactive-element" id="dashboard-area">
+        
+        <!-- Top Panels Row: Latest from Space & Upcoming -->
+        <div class="top-panels-row">
+          
+          <!-- Latest from Space Panel -->
+          <article class="glass-panel news-panel">
+            <div class="panel-header-title">
+              <span>LATEST FROM SPACE</span>
+            </div>
+
+            <div class="news-list">
+              <!-- News Item 1 -->
+              <div class="news-item" data-modal="news-1">
+                <canvas class="news-thumb" id="news-canvas-1" width="92" height="70"></canvas>
+                <div class="news-text">
+                  <span class="news-title">Earth Observation Updates</span>
+                  <span class="news-meta">2024 • 3 min read</span>
+                </div>
+                <canvas class="news-badge-img" id="news-badge-1" width="64" height="50"></canvas>
+              </div>
+
+              <!-- News Item 2 -->
+              <div class="news-item" data-modal="news-2">
+                <canvas class="news-thumb" id="news-canvas-2" width="92" height="70"></canvas>
+                <div class="news-text">
+                  <span class="news-title">Perseid Meteor Peak</span>
+                  <span class="news-meta">2024 • 2 min read</span>
+                </div>
+                <canvas class="news-badge-img" id="news-badge-2" width="64" height="50"></canvas>
+              </div>
+
+              <!-- News Item 3 -->
+              <div class="news-item" data-modal="news-3">
+                <canvas class="news-thumb" id="news-canvas-3" width="92" height="70"></canvas>
+                <div class="news-text">
+                  <span class="news-title">Planetary Neighbourhood</span>
+                  <span class="news-meta">2024 • 4 min read</span>
+                </div>
+                <canvas class="news-badge-img" id="news-badge-3" width="64" height="50"></canvas>
+              </div>
+            </div>
+          </article>
+
+          <!-- Upcoming Astronomical Events Panel -->
+          <article class="glass-panel upcoming-panel">
+            <div class="panel-header-title">
+              <span>UPCOMING</span>
+            </div>
+
+            <div class="upcoming-list">
+              <!-- Event 1: Solar Eclipse -->
+              <div class="upcoming-item" data-modal="upcoming-1">
+                <div class="upcoming-visual eclipse"></div>
+                <div class="upcoming-info">
+                  <span class="upcoming-title">Solar Eclipse</span>
+                  <span class="upcoming-date">June 21, 2025</span>
+                </div>
+              </div>
+
+              <!-- Event 2: Meteor Shower -->
+              <div class="upcoming-item" data-modal="upcoming-2">
+                <div class="upcoming-visual meteor"></div>
+                <div class="upcoming-info">
+                  <span class="upcoming-title">Meteor Shower</span>
+                  <span class="upcoming-date">June 14, 2024</span>
+                </div>
+              </div>
+
+              <!-- Event 3: Planetary Alignment -->
+              <div class="upcoming-item" data-modal="upcoming-3">
+                <div class="upcoming-visual planets"></div>
+                <div class="upcoming-info">
+                  <span class="upcoming-title">Planetary Alignment</span>
+                  <span class="upcoming-date">May 13, 2025</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Main Feature Card Carousel Viewport (Lower Right, Fixed Viewport) -->
+        <article class="feature-panel" id="feature-viewport">
+          <div class="feature-panel-header">
+            <div class="feature-header-left">
+              <span class="feature-title" id="feature-panel-title">FEATURED EVENTS</span>
+              <div class="set-indicators" id="set-dots-group">
+                <span class="set-dot" data-set="0" title="Set 1: Solar System & Exploration"></span>
+                <span class="set-dot active" data-set="1" title="Set 2: Exoplanets & Cosmos (Featured Master)"></span>
+                <span class="set-dot" data-set="2" title="Set 3: Deep Cosmos & Horizons"></span>
+              </div>
+            </div>
+            <div class="scroll-hint">
+              <span>SCROLL TO CYCLE</span>
+              <span class="scroll-hint-arrow">↓</span>
+            </div>
+          </div>
+
+          <div class="feature-stage-wrap">
+            <div class="cards-grid-container" id="cards-grid-container">
+              
+              <!-- SET 0: SOLAR SYSTEM & CORE EXPERIENCES -->
+              <div class="card-set" id="card-set-0" data-set-index="0">
+                <div class="feature-card" data-slug="solar-system">
+                  <div class="card-content">
+                    <span class="card-title">SOLAR SYSTEM</span>
+                    <span class="card-desc">Explore our planetary neighbourhood.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-solar-system" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="space-predictions">
+                  <div class="card-content">
+                    <span class="card-title">SPACE PREDICTIONS</span>
+                    <span class="card-desc">See what's happening next in orbit.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-predictions" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="asteroid-collision">
+                  <div class="card-content">
+                    <span class="card-title">ASTEROID COLLISION</span>
+                    <span class="card-desc">Can you protect Earth from impacts?</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-asteroid" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="galaxies">
+                  <div class="card-content">
+                    <span class="card-title">GALAXIES</span>
+                    <span class="card-desc">Travel beyond our solar system.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-galaxies" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="cosmic-explorer">
+                  <div class="card-content">
+                    <span class="card-title">COSMIC EXPLORER</span>
+                    <span class="card-desc">Interactive orbital flight simulator.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-explorer" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="more-to-explore">
+                  <div class="card-content">
+                    <span class="card-title">MORE TO EXPLORE</span>
+                    <span class="card-desc">Uncharted frontiers & deep space.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-more" width="196" height="156"></canvas></div>
+                </div>
+              </div>
+
+              <!-- SET 1: EXACT MATCH TO REFERENCE SCREENSHOT -->
+              <div class="card-set active" id="card-set-1" data-set-index="1">
+                <!-- Card 1: Exoplanets -->
+                <div class="feature-card" data-slug="exoplanets">
+                  <div class="card-content">
+                    <span class="card-title">EXOPLANETS</span>
+                    <span class="card-desc">Explore worlds orbiting distant stars.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-exoplanets" width="196" height="156"></canvas></div>
+                </div>
+
+                <!-- Card 2: Solar Activity -->
+                <div class="feature-card" data-slug="solar-activity">
+                  <div class="card-content">
+                    <span class="card-title">SOLAR ACTIVITY</span>
+                    <span class="card-desc">Understand what is happening on our Sun.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-solar-activity" width="196" height="156"></canvas></div>
+                </div>
+
+                <!-- Card 3: Space Missions -->
+                <div class="feature-card" data-slug="space-missions">
+                  <div class="card-content">
+                    <span class="card-title">SPACE MISSIONS</span>
+                    <span class="card-desc">Follow humanity's journey beyond Earth.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-space-missions" width="196" height="156"></canvas></div>
+                </div>
+
+                <!-- Card 4: Constellations -->
+                <div class="feature-card" data-slug="constellations">
+                  <div class="card-content">
+                    <span class="card-title">CONSTELLATIONS</span>
+                    <span class="card-desc">Discover patterns across the night sky.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-constellations" width="196" height="156"></canvas></div>
+                </div>
+
+                <!-- Card 5: Deep Space -->
+                <div class="feature-card" data-slug="deep-space">
+                  <div class="card-content">
+                    <span class="card-title">DEEP SPACE</span>
+                    <span class="card-desc">Explore nebulae, star clusters and distant galaxies.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-deep-space" width="196" height="156"></canvas></div>
+                </div>
+
+                <!-- Card 6: Cosmic Timeline -->
+                <div class="feature-card" data-slug="cosmic-timeline">
+                  <div class="card-content">
+                    <span class="card-title">COSMIC TIMELINE</span>
+                    <span class="card-desc">Travel through the major events of the universe.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-cosmic-timeline" width="196" height="156"></canvas></div>
+                </div>
+              </div>
+
+              <!-- SET 2: DEEP COSMIC HORIZONS -->
+              <div class="card-set" id="card-set-2" data-set-index="2">
+                <div class="feature-card" data-slug="black-holes">
+                  <div class="card-content">
+                    <span class="card-title">BLACK HOLES</span>
+                    <span class="card-desc">Singularities bending spacetime itself.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-black-holes" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="nebulae">
+                  <div class="card-content">
+                    <span class="card-title">NEBULAE</span>
+                    <span class="card-desc">Stellar nurseries glowing with cosmic gas.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-nebulae" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="supernovae">
+                  <div class="card-content">
+                    <span class="card-title">SUPERNOVAE</span>
+                    <span class="card-desc">Cataclysmic stellar detonations.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-supernovae" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="star-clusters">
+                  <div class="card-content">
+                    <span class="card-title">STAR CLUSTERS</span>
+                    <span class="card-desc">Ancient gravitational swarms of stars.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-star-clusters" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="spacecraft">
+                  <div class="card-content">
+                    <span class="card-title">SPACECRAFT</span>
+                    <span class="card-desc">Pioneering voyagers venturing into the void.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-spacecraft" width="196" height="156"></canvas></div>
+                </div>
+
+                <div class="feature-card" data-slug="future-discovery">
+                  <div class="card-content">
+                    <span class="card-title">FUTURE DISCOVERY</span>
+                    <span class="card-desc">Next-generation gravitational detectors.</span>
+                  </div>
+                  <div class="card-visual"><canvas id="art-future-discovery" width="196" height="156"></canvas></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Scrollbar Track & Thumb -->
+            <div class="vertical-scrollbar" id="scrollbar-track" title="Click or drag to switch sets">
+              <div class="scrollbar-thumb" id="scrollbar-thumb"></div>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Interactive Mission Dossier / Topic Dialog -->
+  <div class="modal-overlay" id="mission-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-window">
+      <button class="modal-close-btn" id="modal-close-btn" aria-label="Close dialog">✕</button>
+      <div class="modal-tag" id="modal-tag">MISSION DOSSIER</div>
+      <h2 class="modal-title" id="modal-title">EXOPLANETS</h2>
+      <p class="modal-body" id="modal-body">
+        Explore worlds orbiting stars beyond our Solar System. From scorched 'hot Jupiters' to ocean-covered super-Earths, over 5,500 exoplanets have been confirmed by space telescopes like Kepler, TESS, and James Webb.
+      </p>
+
+      <div class="modal-stats" id="modal-stats">
+        <div class="stat-box">
+          <span class="stat-label">Confirmed Worlds</span>
+          <span class="stat-value">5,632</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Habitable Candidates</span>
+          <span class="stat-value">168</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Observation Depth</span>
+          <span class="stat-value">28,000 ly</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="modal-back-btn">Close</button>
+        <button class="modal-btn-primary" id="modal-action-btn">Launch Exploration Module →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       ASTRA — ASTEROID COLLISION SIMULATION EXPERIENCE
+       Integrated AAA Space Simulation & Scientific Impact Analysis Module
+       ========================================================================== -->
+  <div id="asteroid-collision-experience" class="collision-experience" aria-hidden="true" style="display: none;">
+    <!-- Dedicated 3D WebGL Canvas for Collision Cinematic -->
+    <canvas id="collision-webgl-canvas"></canvas>
+
+    <!-- Global Aerospace Navigation Header -->
+    <header class="sim-nav-header" id="sim-nav-header">
+      <div class="sim-nav-left sim-interactive">
+        <button class="sim-brand-btn" id="sim-nav-brand" title="Return to ASTRA Home">
+          <span class="sim-brand-title">ASTRA</span>
+          <span class="sim-brand-subtitle">ORBITAL DEFENSE INITIATIVE</span>
+        </button>
+        <button class="sim-home-btn" id="btn-global-home" title="Return to ASTRA Home">
+          <span>⌂ BACK TO HOME</span>
+        </button>
+        <button class="sim-back-btn" id="sim-nav-back" title="Go back to previous stage">
+          <span>← BACK</span>
+        </button>
+      </div>
+
+      <div class="sim-stage-tracker sim-interactive">
+        <span class="tracker-dot"></span>
+        <span class="tracker-label" id="sim-tracker-label">ASTRA ORBITAL CONTROL // 01 INTRO</span>
+      </div>
+
+      <div class="sim-nav-right sim-interactive">
+        <button class="sim-icon-btn" id="sim-fullscreen-btn" title="Toggle Fullscreen" aria-label="Fullscreen">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stage Container -->
+    <main class="sim-stage-container">
+      
+      <!-- STAGE 1: COCKPIT HUD (MATCHING STORYBOARD PANEL 1) -->
+      <section class="sim-stage-view active" id="view-intro">
+        <div class="cockpit-frame-container">
+          <!-- Left Telemetry Monitor -->
+          <div class="dark-glass-panel cockpit-monitor">
+            <div>
+              <div class="monitor-header">
+                <span>ORBITAL MONITOR</span>
+                <span style="color: #00e699;">LIVE</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">SURVEILLANCE</span>
+                <span class="hud-data-val">CNEOS / SENTRY</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">TRACKED NEOS</span>
+                <span class="hud-data-val">34,890 BODIES</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">KNOWN PHAS</span>
+                <span class="hud-data-val">2,412 OBJECTS</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">RADAR STATUS</span>
+                <span class="hud-data-val" style="color: #64d2ff;">ACTIVE SEARCH</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 8.5px; color: #8ca2b9; letter-spacing: 0.12em; line-height: 1.5; border-top: 1px solid rgba(100, 210, 255, 0.15); padding-top: 10px;">
+                NASA / JPL SBDB TELEMETRY FEEDS SYNCHRONIZED. PLANETARY DEFENSE MONITOR ONLINE.
+              </div>
+            </div>
+          </div>
+
+          <!-- Center Cinematic Viewport Overlay -->
+          <div class="cockpit-center-viewport">
+            <h1 class="cockpit-title">ASTEROID COLLISION<br><span style="color: #64d2ff;">PLANETARY IMPACT SIMULATOR</span></h1>
+            <p class="cockpit-desc">
+              Engage high-precision orbital mechanics, peer-reviewed impact physics, and real NASA/JPL Near-Earth Object telemetry to evaluate hypothetical collision consequences on Earth.
+            </p>
+            <button class="primary-cta-btn" id="btn-intro-proceed">
+              <span>COMMENCE TARGETING &amp; IMPACT ANALYSIS</span>
+              <span>→</span>
+            </button>
+          </div>
+
+          <!-- Right Telemetry Monitor -->
+          <div class="dark-glass-panel cockpit-monitor">
+            <div>
+              <div class="monitor-header">
+                <span>PHYSICS PIPELINE</span>
+                <span style="color: #64d2ff;">CALIBRATED</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">SCALING ENGINE</span>
+                <span class="hud-data-val">COLLINS ET AL. 2005</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">CRATER DYNAMICS</span>
+                <span class="hud-data-val">SCHMIDT-HOLSAPPLE</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">SHOCK OVERPRESSURE</span>
+                <span class="hud-data-val">GLASSTONE &amp; DOLAN</span>
+              </div>
+              <div class="hud-data-row">
+                <span class="hud-data-label">SEISMIC COUPLING</span>
+                <span class="hud-data-val">MOMENT MAGNITUDE</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 8.5px; color: #8ca2b9; letter-spacing: 0.12em; line-height: 1.5; border-top: 1px solid rgba(100, 210, 255, 0.15); padding-top: 10px;">
+                CALCULATIONS FOLLOW STRICT SCIENTIFIC STANDARDS DISTINGUISHING OBSERVED FROM MODEL ESTIMATES.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STAGE 2: ASTEROID PARAMETERS DASHBOARD (MATCHING STORYBOARD PANEL 4) -->
+      <section class="sim-stage-view" id="view-parameters">
+        <div class="parameters-main-grid">
+          <!-- Left 3D Rock Viewport -->
+          <div class="dark-glass-panel param-rock-col">
+            <div>
+              <div class="monitor-header">
+                <span>3D BODY RENDERING</span>
+                <span class="scientific-badge badge-observed" id="param-diam-badge">OBSERVED</span>
+              </div>
+              <div class="param-rock-view">
+                <!-- Three.js scene renders preview rock -->
+              </div>
+              <div style="margin-top: 14px; font-size: 11px; line-height: 1.5; color: #8ca2b9;" id="param-desc-text">
+                Rubble-pile near-Earth asteroid catalogued by NASA/JPL.
+              </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <button class="primary-cta-btn" id="btn-param-proceed-target" style="width: 100%; justify-content: center;">
+                <span>PROCEED TO 2D EARTH TARGETING</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Mission Control Data Dashboard (Panel 4 Match) -->
+          <div class="dark-glass-panel param-data-col">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;">
+                <div>
+                  <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.12em; color: #ffffff;" id="param-asteroid-title">
+                    99942 APOPHIS
+                  </h2>
+                  <span style="font-size: 11px; color: #64d2ff; letter-spacing: 0.15em;" id="param-asteroid-class">Aten Class Asteroid</span>
+                </div>
+                <div style="font-size: 9.5px; color: #8ca2b9; text-align: right;">
+                  DATA SOURCE: NASA/JPL SBDB<br>SOLUTION DE441
+                </div>
+              </div>
+
+              <!-- Asteroid Selector Bar -->
+              <div class="asteroid-selector-bar">
+                <span style="font-size: 10px; font-weight: 700; color: #8ca2b9; letter-spacing: 0.14em; white-space: nowrap;">SELECT ASTEROID:</span>
+                <select id="param-asteroid-select" class="asteroid-select-input">
+                  <option value="99942" selected>99942 Apophis (340m Aten PHA)</option>
+                  <option value="101955">101955 Bennu (490m Apollo PHA)</option>
+                  <option value="65803">65803 Didymos (780m Apollo / DART Target)</option>
+                  <option value="162173">162173 Ryugu (900m C-type PHA)</option>
+                  <option value="433">433 Eros (16.8km S-type Near-Earth)</option>
+                  <option value="2024-YR4">2024 YR4 (60m High Impact Probability)</option>
+                  <option value="chelyabinsk">Chelyabinsk Meteor 2013 (19m)</option>
+                  <option value="tunguska">Tunguska Event 1908 (65m)</option>
+                  <option value="chicxulub">Chicxulub Impactor (10km K-Pg Extinction)</option>
+                  <option value="custom">⚙ Custom Threat Scenario (User Tuned)</option>
+                </select>
+              </div>
+
+              <!-- Custom Parameter Sliders (When Custom Selected) -->
+              <div id="custom-params-sliders-wrap">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #8ca2b9; margin-bottom: 4px;">
+                    <span>DIAMETER</span>
+                    <span id="custom-diam-val" style="color: #ffffff; font-weight: 700;">340 m</span>
+                  </div>
+                  <input type="range" id="custom-diam" min="10" max="10000" step="10" value="340" style="width: 100%;">
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #8ca2b9; margin-bottom: 4px;">
+                    <span>VELOCITY</span>
+                    <span id="custom-vel-val" style="color: #ffffff; font-weight: 700;">17.5 km/s</span>
+                  </div>
+                  <input type="range" id="custom-vel" min="11.2" max="72.0" step="0.5" value="17.5" style="width: 100%;">
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #8ca2b9; margin-bottom: 4px;">
+                    <span>IMPACT ANGLE</span>
+                    <span id="custom-angle-val" style="color: #ffffff; font-weight: 700;">45°</span>
+                  </div>
+                  <input type="range" id="custom-angle" min="15" max="90" step="1" value="45" style="width: 100%;">
+                </div>
+                <div>
+                  <div style="font-size: 9.5px; color: #8ca2b9; margin-bottom: 4px;">COMPOSITION</div>
+                  <select id="custom-comp" style="width: 100%; background: #0a182a; border: 1px solid rgba(100, 210, 255, 0.3); color: #ffffff; padding: 4px; border-radius: 4px; font-size: 10.5px;">
+                    <option value="stony">Stony / Silicate (3,000 kg/m³)</option>
+                    <option value="iron">Iron-Nickel (7,800 kg/m³)</option>
+                    <option value="carbonaceous">Carbonaceous (1,800 kg/m³)</option>
+                    <option value="cometary">Cometary Ice (1,000 kg/m³)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Hero Stat Cards -->
+              <div class="param-metrics-row">
+                <div class="param-metric-card">
+                  <div class="param-metric-title">CALCULATED MASS</div>
+                  <div class="param-metric-number" id="param-mass-val">1.33 × 10¹¹ kg</div>
+                  <span class="scientific-badge badge-estimated" id="param-mass-badge">ESTIMATED</span>
+                </div>
+                <div class="param-metric-card">
+                  <div class="param-metric-title">ENCOUNTER VELOCITY</div>
+                  <div class="param-metric-number" id="param-vel-val">12.67 km/s</div>
+                  <div style="font-size: 10px; color: #8ca2b9;" id="param-vel-sub">28,340 mph</div>
+                </div>
+                <div class="param-metric-card">
+                  <div class="param-metric-title">EFFECTIVE DIAMETER</div>
+                  <div class="param-metric-number" id="param-diam-val">340 m</div>
+                  <div style="font-size: 10px; color: #8ca2b9;" id="param-diam-uncert">± 40 m uncertainty</div>
+                </div>
+              </div>
+
+              <!-- Charts Row (Panel 4 Match) -->
+              <div class="param-charts-row">
+                <div class="param-chart-card">
+                  <div style="font-size: 9px; font-weight: 700; color: #64d2ff; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">
+                    COMPOSITION ANALYSIS
+                  </div>
+                  <canvas id="canvas-composition-donut" width="300" height="110"></canvas>
+                </div>
+                <div class="param-chart-card">
+                  <div style="font-size: 9px; font-weight: 700; color: #64d2ff; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px;">
+                    SPECTRAL REFLECTANCE CURVE
+                  </div>
+                  <canvas id="canvas-spectral-chart" width="300" height="110"></canvas>
+                </div>
+              </div>
+
+              <!-- Orbital Telemetry Table -->
+              <div>
+                <table class="orbital-telemetry-table">
+                  <tbody>
+                    <tr>
+                      <td style="color: #8ca2b9;">SPK-ID:</td><td id="param-table-spk" style="color: #ffffff; font-family: monospace;">20099942</td>
+                      <td style="color: #8ca2b9;">SEMI-MAJOR AXIS (a):</td><td id="param-table-sma" style="color: #ffffff; font-family: monospace;">0.922 AU</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #8ca2b9;">ORBITAL CLASS:</td><td id="param-table-class" style="color: #ffffff;">Aten (ATE)</td>
+                      <td style="color: #8ca2b9;">ECCENTRICITY (e):</td><td id="param-table-ecc" style="color: #ffffff; font-family: monospace;">0.191</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #8ca2b9;">PHA STATUS:</td><td id="param-table-pha" style="color: #ff6450; font-weight: 700;">YES</td>
+                      <td style="color: #8ca2b9;">INCLINATION (i):</td><td id="param-table-inc" style="color: #ffffff; font-family: monospace;">3.34°</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #8ca2b9;">EARTH MOID:</td><td id="param-table-moid" style="color: #ffffff; font-family: monospace;">0.000108 AU</td>
+                      <td style="color: #8ca2b9;">ORBITAL PERIOD:</td><td id="param-table-period" style="color: #ffffff; font-family: monospace;">324.0 days</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #8ca2b9;">OBSERVATIONS:</td><td id="param-table-obs" colspan="3" style="color: #ffffff;">7,370 observations over 6,599 days</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STAGE 3: 2D FLAT SCIENTIFIC EARTH TARGET MAP (MATCHING STORYBOARD PANEL 5, 6 & 9) -->
+      <section class="sim-stage-view" id="view-target-map">
+        <div class="target-map-fullscreen">
+          <canvas id="earth-target-canvas"></canvas>
+        </div>
+
+        <!-- Top-Left Target HUD Box (Panel 6 Match) -->
+        <div class="dark-glass-panel map-top-hud">
+          <div class="map-top-hud-title" id="top-hud-target-title">TARGET: MUMBAI, INDIA</div>
+        </div>
+
+        <!-- Clean Bottom Targeting HUD (Panel 6 Match) -->
+        <div class="map-bottom-bar">
+          <div class="dark-glass-panel map-live-coords">
+            <div style="font-size: 8px; font-weight: 700; color: #8ca2b9; letter-spacing: 0.18em; text-transform: uppercase;">
+              CURRENT CURSOR COORDINATES
+            </div>
+            <div class="live-coords-text" id="live-target-coords">
+              LAT 19.0760° N  |  LON 72.8777° E
+            </div>
+            <div style="font-size: 9.5px; color: #8ca2b9;">
+              Drag to pan • Scroll to zoom • Click anywhere on Earth to lock target
+            </div>
+          </div>
+
+          <div class="dark-glass-panel map-target-action-box">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+                <span style="font-size: 8.5px; font-weight: 700; color: #00e699; letter-spacing: 0.18em;">TARGET LOCKED</span>
+                <span style="font-size: 9px; color: #64d2ff; font-family: monospace;" id="hud-target-latlon">19.0760° N, 72.8777° E</span>
+              </div>
+              <div style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff;" id="hud-target-name">
+                MUMBAI, INDIA
+              </div>
+              <div style="font-size: 9.5px; color: #8ca2b9;" id="hud-target-region">
+                WESTERN COAST OF INDIA, ARABIAN SEA
+              </div>
+            </div>
+
+            <div>
+              <select id="map-preset-select" class="map-preset-select" title="Choose Preset Target">
+                <option value="mumbai" selected>Preset: Mumbai, India (Master)</option>
+                <option value="delhi">Preset: New Delhi, India</option>
+                <option value="tokyo">Preset: Tokyo, Japan</option>
+                <option value="london">Preset: London, UK</option>
+                <option value="nyc">Preset: New York, USA</option>
+                <option value="chicxulub">Preset: Chicxulub, Yucatan</option>
+                <option value="pacific">Preset: Mid-Pacific Ocean</option>
+              </select>
+            </div>
+
+            <div>
+              <button class="primary-cta-btn" id="btn-confirm-target-sim">
+                <span>CONFIRM TARGET &amp; SIMULATE IMPACT</span>
+                <span>→</span>
+              </button>
+              <button class="primary-cta-btn" id="btn-map-to-report" style="display: none;">
+                <span>VIEW SCIENTIFIC REPORT</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STAGE 4: ORBITAL APPROACH & ENTRY TELEMETRY HUD (MATCHING STORYBOARD PANEL 7 & 8) -->
+      <section class="sim-stage-view" id="view-approach-hud">
+        <div class="dark-glass-panel flight-telemetry-hud">
+          <div class="monitor-header">
+            <span>INBOUND TELEMETRY</span>
+            <span style="color: #ffaa33;" id="approach-stage-sub">ORBITAL APPROACH</span>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div class="hud-data-label">ALTITUDE ABOVE SURFACE</div>
+            <div class="telemetry-big-number" id="approach-alt-num">1,240</div>
+            <div style="font-size: 8.5px; color: #8ca2b9;">kilometers</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div class="hud-data-label">GEOCENTRIC VELOCITY</div>
+            <div class="telemetry-big-number" id="approach-vel-num" style="color: #64d2ff;">17.4 km/s</div>
+          </div>
+          <div>
+            <div class="hud-data-label">DISTANCE TO GROUND ZERO</div>
+            <div class="telemetry-big-number" id="approach-dist-num" style="color: #ff6450;">1,850 km</div>
+          </div>
+        </div>
+
+        <!-- Center Countdown Pill Banner -->
+        <div class="approach-countdown-pill">
+          <div style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; color: #8ca2b9;">TIME TO IMPACT</div>
+          <div class="countdown-digits" id="approach-countdown-sec">T - 00:08.5</div>
+        </div>
+      </section>
+
+      <!-- STAGE 5: SCIENTIFIC RESULTS TELEMETRY REPORT (MATCHING STORYBOARD PANEL 10) -->
+      <section class="sim-stage-view" id="view-results">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div>
+            <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 0.12em; color: #ffffff;">
+              SCIENTIFIC RESULTS &amp; IMPACT ANALYSIS REPORT
+            </h2>
+            <div style="font-size: 11px; color: #64d2ff; letter-spacing: 0.1em; margin-top: 3px;">
+              TARGET: <span id="res-target-title">MUMBAI, INDIA</span> &bull; <span id="res-target-coords">19.0760° N, 72.8777° E</span> &bull; ASTEROID: <span id="res-asteroid-name">99942 APOPHIS</span>
+            </div>
+          </div>
+          <div style="font-size: 9.5px; color: #8ca2b9; text-align: right;">
+            PHYSICS MODEL: COLLINS, MELOSH &amp; MARCUS (2005)<br>
+            NASA/JPL SBDB &amp; CNEOS ORBITAL DATA
+          </div>
+        </div>
+
+        <div class="results-columns-grid">
+          <!-- Card 1: Energy Release -->
+          <div class="dark-glass-panel results-metric-card">
+            <div class="monitor-header">
+              <span>TOTAL KINETIC ENERGY RELEASE</span>
+              <span class="scientific-badge badge-observed">MODEL OUTPUT</span>
+            </div>
+            <div class="results-big-stat" id="res-energy-mt" style="color: #ffaa33;">1,260 Mt</div>
+            <div style="font-size: 11px; color: #8ca2b9; font-family: monospace; margin-bottom: 12px;" id="res-energy-joules">5.27 × 10¹⁸ Joules</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+              <div style="background: rgba(12, 26, 46, 0.5); padding: 8px; border-radius: 6px;">
+                <div style="font-size: 8px; color: #8ca2b9; text-transform: uppercase;">Hiroshima Equiv.</div>
+                <div style="font-size: 12px; font-weight: 700; color: #ffffff; margin-top: 2px;" id="res-hiroshima-equiv">84,000 × (15 kt)</div>
+              </div>
+              <div style="background: rgba(12, 26, 46, 0.5); padding: 8px; border-radius: 6px;">
+                <div style="font-size: 8px; color: #8ca2b9; text-transform: uppercase;">Tsar Bomba Equiv.</div>
+                <div style="font-size: 12px; font-weight: 700; color: #ffffff; margin-top: 2px;" id="res-tsarbomba-equiv">25.2 × (50 Mt)</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <div style="font-size: 9px; color: #64d2ff; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">OVERPRESSURE DECAY VS DISTANCE</div>
+              <canvas id="canvas-chart-overpressure" width="460" height="95"></canvas>
+            </div>
+          </div>
+
+          <!-- Card 2: Crater Dimensions -->
+          <div class="dark-glass-panel results-metric-card">
+            <div class="monitor-header">
+              <span>CRATER EXCAVATION METRICS</span>
+              <span class="scientific-badge badge-estimated">CALCULATED</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <div class="hud-data-label">FINAL CRATER DIAMETER</div>
+                <div class="results-big-stat" id="res-crater-diam" style="color: #ff4466;">8.20 km</div>
+                <span class="scientific-badge badge-estimated" id="res-crater-type">COMPLEX CRATER</span>
+              </div>
+              <div>
+                <div class="hud-data-label">FINAL CRATER DEPTH</div>
+                <div class="results-big-stat" id="res-crater-depth" style="color: #64d2ff;">510 m</div>
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 10.5px; color: #8ca2b9;">
+              Excavated Target Mass: <span id="res-crater-mass" style="color: #ffffff; font-family: monospace;">1.42 × 10¹⁴ kg</span>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <div style="font-size: 9px; color: #ff44aa; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">THERMAL RADIATION PULSE</div>
+              <canvas id="canvas-chart-thermal" width="460" height="95"></canvas>
+            </div>
+          </div>
+
+          <!-- Card 3: Environmental Consequences -->
+          <div class="dark-glass-panel results-metric-card">
+            <div class="monitor-header">
+              <span>REGIONAL BLAST &amp; DAMAGE RADII</span>
+              <span class="scientific-badge badge-estimated">CALCULATED</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 10.5px;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(100, 210, 255, 0.1); padding-bottom: 4px;">
+                <span style="color: #ff6633; font-weight: 700;">20 PSI OVERPRESSURE:</span>
+                <span id="res-blast-20psi" style="color: #ffffff; font-family: monospace;">28.4 km (Concrete buildings collapse)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(100, 210, 255, 0.1); padding-bottom: 4px;">
+                <span style="color: #ffaa33; font-weight: 700;">5 PSI OVERPRESSURE:</span>
+                <span id="res-blast-5psi" style="color: #ffffff; font-family: monospace;">62.1 km (Residential collapse)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(100, 210, 255, 0.1); padding-bottom: 4px;">
+                <span style="color: #ffd033; font-weight: 700;">1 PSI OVERPRESSURE:</span>
+                <span id="res-blast-1psi" style="color: #ffffff; font-family: monospace;">154.0 km (Windows shatter)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(100, 210, 255, 0.1); padding-bottom: 4px;">
+                <span style="color: #ff44aa; font-weight: 700;">THERMAL (3RD BURNS):</span>
+                <span id="res-thermal-3rd" style="color: #ffffff; font-family: monospace;">45.2 km (Third-degree burns)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: #33ccff; font-weight: 700;">SEISMIC MAGNITUDE:</span>
+                <span id="res-seismic-mag" style="color: #ffffff; font-family: monospace;">M6.7 Richter (Felt up to 840 km)</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <div style="font-size: 9px; color: #33ccff; font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">SYNTHETIC SEISMIC WAVEFORM</div>
+              <canvas id="canvas-chart-seismic" width="460" height="80"></canvas>
+            </div>
+          </div>
+
+          <!-- Card 4: Global Climate & Transparency -->
+          <div class="dark-glass-panel results-metric-card">
+            <div class="monitor-header">
+              <span>CLIMATIC AUDIT &amp; TRANSPARENCY</span>
+              <span class="scientific-badge badge-observed">STANDARDS</span>
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.55; color: #ffffff; margin-bottom: 14px;" id="res-climate-summary">
+              Sub-continental impact event. Significant regional particulate loading.
+            </div>
+
+            <div style="background: rgba(10, 22, 38, 0.6); border: 1px solid rgba(100, 210, 255, 0.15); border-radius: 8px; padding: 12px; font-size: 9.5px; line-height: 1.5; color: #8ca2b9;">
+              <strong style="color: #64d2ff;">SCIENTIFIC PROTOCOL NOTICE:</strong><br>
+              Every parameter shown distinguishes observed physical telemetry from scaling equation approximations. Results assume flat topography and standard sea-level atmosphere. Real impact dynamics contain geological variance.
+            </div>
+
+            <div style="margin-top: 18px;">
+              <button class="primary-cta-btn" id="btn-view-effect-map" style="width: 100%; justify-content: center;">
+                <span>EXPLORE 2D CONCENTRIC DAMAGE MAP</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Bar at Bottom -->
+        <div class="results-bottom-bar">
+          <button class="secondary-btn" id="btn-results-replay">
+            <span>⟲ REPLAY SIMULATION</span>
+          </button>
+          <button class="secondary-btn" id="btn-results-new">
+            <span>⚙ CHANGE PARAMETERS</span>
+          </button>
+          <button class="sim-home-btn" id="btn-results-exit-home">
+            <span>⌂ BACK TO HOME</span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT LOGIC
+       1. Three.js Photorealistic 3D Earth, Cloud Sphere, Atmosphere Shader & Orbit Path
+       2. Realistic Artwork Generation on Canvases (Zero Broken Images/Zero CORS Issues)
+       3. Scroll-Controlled Feature Card Carousel (Directional Transitions & Wheel Lock)
+       4. Card Pointer Parallax & Interactive Mission Dossiers
+       5. Ambient Audio Synthesizer (Web Audio API)
+       ========================================================================== -->
+  <script>
+  (function() {
+    'use strict';
+
+    /* ==========================================================================
+       1. THREE.JS 3D EARTH SIMULATION (INDEPENDENT ROTATION & ACCURATE COMPOSITION)
+       ========================================================================== */
+    const canvas = document.getElementById('webgl-canvas');
+    let renderer, scene, camera, earthMesh, cloudMesh, innerAtmosphereMesh, outerAtmosphereMesh;
+    let orbitLine, satelliteMesh1, satelliteMesh2;
+    let clock = new THREE.Clock();
+
+    function initThree() {
+      // Scene
+      scene = new THREE.Scene();
+
+      // Camera: Low-orbit perspective matching master screenshot
+      const aspect = window.innerWidth / window.innerHeight;
+      camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 1000);
+      updateCameraPosition();
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+
+      // Lights: Directional sunlight casting from upper-left
+      const sunLight = new THREE.DirectionalLight(0xffffff, 2.3);
+      sunLight.position.set(-6, 4.2, 5.5);
+      scene.add(sunLight);
+
+      // Night-side ambient fill (dark space navy)
+      const ambientLight = new THREE.AmbientLight(0x030a16, 0.35);
+      scene.add(ambientLight);
+
+      // Cyan rim fill for Rayleigh atmospheric reflection
+      const rimLight = new THREE.DirectionalLight(0x40a0ff, 0.85);
+      rimLight.position.set(4, 2, -2);
+      scene.add(rimLight);
+
+      // Build 3D Universe
+      createStarfield();
+      createEarth();
+      createSatelliteOrbit();
+
+      window.addEventListener('resize', onWindowResize, false);
+
+      // Start independent animation loop
+      animate();
+    }
+
+    function updateCameraPosition() {
+      const w = window.innerWidth;
+      // Precision positioning:
+      // Earth limb sweeps from lower left (behind CTA button)
+      // to center-right (underneath headline and panels)
+      if (w > 1200) {
+        camera.position.set(0, 0, 5.0);
+      } else if (w > 768) {
+        camera.position.set(0.1, 0.1, 5.4);
+      } else {
+        camera.position.set(0.2, 0.2, 5.8);
+      }
+      camera.lookAt(0, -0.45, 0);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      updateCameraPosition();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+
+    /* --------------------------------------------------------------------------
+       Starfield & Nebula Dust Particles
+       -------------------------------------------------------------------------- */
+    function createStarfield() {
+      const starCount = 2000;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(starCount * 3);
+      const colors = new Float32Array(starCount * 3);
+
+      for (let i = 0; i < starCount; i++) {
+        const i3 = i * 3;
+        const radius = 45 + Math.random() * 85;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+
+        positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i3 + 2] = -Math.abs(radius * Math.cos(phi)) - 4;
+
+        const colType = Math.random();
+        if (colType > 0.86) {
+          colors[i3] = 1.0; colors[i3 + 1] = 0.88; colors[i3 + 2] = 0.72; // Warm
+        } else if (colType > 0.6) {
+          colors[i3] = 0.72; colors[i3 + 1] = 0.9; colors[i3 + 2] = 1.0;  // Cyan/Blue
+        } else {
+          colors[i3] = 0.95; colors[i3 + 1] = 0.96; colors[i3 + 2] = 1.0;  // Pure White
+        }
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const starCanvas = document.createElement('canvas');
+      starCanvas.width = 16;
+      starCanvas.height = 16;
+      const ctx = starCanvas.getContext('2d');
+      const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.35, 'rgba(255,255,255,0.75)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 16, 16);
+
+      const starTex = new THREE.CanvasTexture(starCanvas);
+      const starMaterial = new THREE.PointsMaterial({
+        size: 0.95,
+        vertexColors: true,
+        map: starTex,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false
+      });
+
+      const stars = new THREE.Points(geometry, starMaterial);
+      scene.add(stars);
+    }
+
+    /* --------------------------------------------------------------------------
+       Photorealistic Procedural Earth Canvas Textures
+       -------------------------------------------------------------------------- */
+    function generateEarthDayTexture() {
+      const c = document.createElement('canvas');
+      c.width = 2048;
+      c.height = 1024;
+      const ctx = c.getContext('2d');
+
+      // Deep Ocean Base
+      const oceanGrad = ctx.createLinearGradient(0, 0, 0, c.height);
+      oceanGrad.addColorStop(0, '#0a223d');
+      oceanGrad.addColorStop(0.3, '#0d2d52');
+      oceanGrad.addColorStop(0.5, '#0b2644');
+      oceanGrad.addColorStop(0.8, '#081c33');
+      oceanGrad.addColorStop(1, '#051224');
+      ctx.fillStyle = oceanGrad;
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      function drawContinent(paths, fillStyle, strokeStyle, strokeW = 4) {
+        ctx.fillStyle = fillStyle;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = strokeW;
+        paths.forEach(p => {
+          ctx.beginPath();
+          p.forEach((pt, idx) => {
+            const x = (pt[0] / 360 + 0.5) * c.width;
+            const y = (0.5 - pt[1] / 180) * c.height;
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+          ctx.fill();
+          if (strokeStyle) ctx.stroke();
+        });
+      }
+
+      // North America (Dominant continent facing camera in reference screenshot)
+      const northAmerica = [[
+        [-168, 65], [-162, 70], [-140, 71], [-120, 70], [-100, 71], [-80, 62],
+        [-65, 52], [-60, 46], [-66, 44], [-75, 36], [-80, 26], [-90, 21],
+        [-97, 26], [-105, 23], [-115, 30], [-124, 38], [-125, 49], [-136, 58],
+        [-150, 61], [-168, 65]
+      ]];
+      drawContinent(northAmerica, '#4b5e3f', '#243b20', 6);
+
+      // Central America & Baja
+      const centralAmerica = [[
+        [-97, 26], [-92, 17], [-84, 10], [-78, 8], [-80, 14], [-90, 20], [-97, 26]
+      ]];
+      drawContinent(centralAmerica, '#31542a', '#1e3819', 4);
+
+      // South America
+      const southAmerica = [[
+        [-76, 11], [-62, 7], [-50, -1], [-35, -5], [-38, -15], [-50, -28],
+        [-65, -45], [-72, -55], [-75, -45], [-70, -30], [-78, -15], [-81, -2], [-76, 11]
+      ]];
+      drawContinent(southAmerica, '#385732', '#223c1e', 5);
+
+      // Europe
+      const europe = [[
+        [-10, 36], [0, 43], [12, 44], [22, 54], [30, 60], [42, 68],
+        [32, 70], [16, 62], [6, 58], [-4, 50], [-10, 40], [-10, 36]
+      ]];
+      drawContinent(europe, '#4a593e', '#324227', 4);
+
+      // Africa
+      const africa = [[
+        [-17, 30], [-5, 36], [10, 37], [25, 32], [32, 31], [43, 12], [51, 11],
+        [42, -5], [35, -20], [28, -34], [18, -34], [12, -15], [9, 5], [-15, 12], [-17, 30]
+      ]];
+      drawContinent(africa, '#8c7042', '#6b5128', 5);
+
+      // Asia & Siberia
+      const asia = [[
+        [30, 60], [60, 68], [90, 73], [120, 70], [150, 60], [170, 65],
+        [160, 50], [140, 40], [120, 32], [105, 20], [100, 10], [80, 15],
+        [70, 25], [60, 25], [50, 30], [35, 35], [30, 45], [30, 60]
+      ]];
+      drawContinent(asia, '#4c5237', '#343a22', 5);
+
+      // India
+      const india = [[ [68, 25], [77, 8], [88, 22], [80, 27], [68, 25] ]];
+      drawContinent(india, '#41542f', '#2a3b1e', 4);
+
+      // Australia
+      const australia = [[
+        [113, -22], [125, -15], [138, -12], [148, -20], [152, -30], [140, -38], [115, -34], [113, -22]
+      ]];
+      drawContinent(australia, '#9e6231', '#784319', 5);
+
+      // Mountains & Relief
+      ctx.fillStyle = '#6d685c';
+      ctx.beginPath();
+      ctx.ellipse((-112/360 + 0.5)*c.width, (0.5 - 45/180)*c.height, 16, 75, 0.35, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse((-70/360 + 0.5)*c.width, (0.5 - -20/180)*c.height, 10, 90, 0.15, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse((85/360 + 0.5)*c.width, (0.5 - 29/180)*c.height, 45, 10, -0.2, 0, Math.PI*2);
+      ctx.fill();
+
+      // Polar Ice Caps
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(0, 0, c.width, c.height * 0.08);
+      ctx.fillRect(0, c.height * 0.88, c.width, c.height * 0.12);
+
+      // Shallow Shelf Glow
+      ctx.strokeStyle = 'rgba(40, 185, 215, 0.35)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      const texture = new THREE.CanvasTexture(c);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    function generateEarthCloudsTexture() {
+      const c = document.createElement('canvas');
+      c.width = 2048;
+      c.height = 1024;
+      const ctx = c.getContext('2d');
+
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      for (let i = 0; i < 500; i++) {
+        const x = Math.random() * c.width;
+        const latZone = (Math.random() - 0.5) * 2;
+        const y = (0.5 + latZone * 0.42) * c.height;
+        const radX = 35 + Math.random() * 140;
+        const radY = 12 + Math.random() * 40;
+        const rot = (Math.random() - 0.5) * 0.8;
+
+        const alpha = 0.12 + Math.random() * 0.5;
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+
+        ctx.beginPath();
+        ctx.ellipse(x, y, radX, radY, rot, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (Math.random() > 0.55) {
+          ctx.beginPath();
+          ctx.ellipse(x + radX * 0.6, y + radY * 0.4, radX * 0.5, radY * 0.3, rot + 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawCyclone(cx, cy, r) {
+        for (let a = 0; a < Math.PI * 5; a += 0.2) {
+          const dist = (a / (Math.PI * 5)) * r;
+          const px = cx + Math.cos(a) * dist;
+          const py = cy + Math.sin(a) * dist;
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.45 - (dist/r)*0.3})`;
+          ctx.beginPath();
+          ctx.arc(px, py, 6 + dist * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      drawCyclone(c.width * 0.28, c.height * 0.42, 70);
+      drawCyclone(c.width * 0.72, c.height * 0.38, 85);
+
+      const texture = new THREE.CanvasTexture(c);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    /* --------------------------------------------------------------------------
+       Create Earth Meshes with Atmospheric Shader
+       -------------------------------------------------------------------------- */
+    function createEarth() {
+      // Precision planetary geometry & scale
+      // Radius and position tuned so the top limb sweeps below the hero text
+      const earthRadius = 4.2;
+      const sphereGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+
+      const earthDayTex = generateEarthDayTexture();
+      const earthCloudTex = generateEarthCloudsTexture();
+
+      const earthMat = new THREE.MeshStandardMaterial({
+        map: earthDayTex,
+        roughness: 0.65,
+        metalness: 0.1,
+        bumpScale: 0.04
+      });
+
+      earthMesh = new THREE.Mesh(sphereGeo, earthMat);
+      // Precision placement matching master reference:
+      // Earth limb begins at lower-left, peaks below the headline text,
+      // and continues down across the right behind the featured panels.
+      earthMesh.position.set(0.42, -4.25, 0);
+      earthMesh.rotation.z = THREE.MathUtils.degToRad(-19.5); // Earth axial tilt
+      earthMesh.rotation.y = THREE.MathUtils.degToRad(215);   // Showing North America into view
+      scene.add(earthMesh);
+
+      // Cloud Sphere Layer
+      const cloudGeo = new THREE.SphereGeometry(earthRadius * 1.008, 64, 64);
+      const cloudMat = new THREE.MeshStandardMaterial({
+        map: earthCloudTex,
+        transparent: true,
+        opacity: 0.75,
+        blending: THREE.NormalBlending,
+        depthWrite: false
+      });
+      cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+      earthMesh.add(cloudMesh);
+
+      // 1. Inner Atmosphere Rim Glow (on surface of Earth)
+      const innerAtmoGeo = new THREE.SphereGeometry(earthRadius * 1.012, 64, 64);
+      const innerAtmoMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewPosition = -mvPosition.xyz;
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          varying vec3 vViewPosition;
+          void main() {
+            vec3 viewDir = normalize(vViewPosition);
+            float dotNV = max(dot(viewDir, vNormal), 0.0);
+            float fresnel = 1.0 - dotNV;
+            fresnel = pow(fresnel, 3.2);
+            vec3 cyanGlow = mix(vec3(0.15, 0.6, 1.0), vec3(0.65, 0.95, 1.0), fresnel);
+            gl_FragColor = vec4(cyanGlow, fresnel * 0.9);
+          }
+        `,
+        blending: THREE.AdditiveBlending,
+        side: THREE.FrontSide,
+        transparent: true,
+        depthWrite: false
+      });
+      innerAtmosphereMesh = new THREE.Mesh(innerAtmoGeo, innerAtmoMat);
+      earthMesh.add(innerAtmosphereMesh);
+
+      // 2. Outer Atmospheric Rayleigh Halo (Extends softly into space)
+      const outerAtmoGeo = new THREE.SphereGeometry(earthRadius * 1.045, 64, 64);
+      const outerAtmoMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          void main() {
+            float intensity = pow(0.68 - dot(vNormal, vec3(0, 0, 1.0)), 2.6);
+            vec3 atmosphereColor = mix(vec3(0.08, 0.48, 1.0), vec3(0.55, 0.92, 1.0), intensity);
+            gl_FragColor = vec4(atmosphereColor, intensity * 0.85);
+          }
+        `,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+        transparent: true,
+        depthWrite: false
+      });
+      outerAtmosphereMesh = new THREE.Mesh(outerAtmoGeo, outerAtmoMat);
+      earthMesh.add(outerAtmosphereMesh);
+
+      attemptHighResTextureUpgrade(earthMat, cloudMat);
+    }
+
+    function attemptHighResTextureUpgrade(earthMat, cloudMat) {
+      const loader = new THREE.TextureLoader();
+      loader.setCrossOrigin('anonymous');
+      
+      const dayUrl = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+      const cloudsUrl = 'https://unpkg.com/three-globe/example/img/earth-clouds.png';
+
+      loader.load(dayUrl, function(tex) {
+        tex.wrapS = THREE.RepeatWrapping;
+        earthMat.map = tex;
+        earthMat.needsUpdate = true;
+      }, undefined, function() {});
+
+      loader.load(cloudsUrl, function(tex) {
+        tex.wrapS = THREE.RepeatWrapping;
+        cloudMat.map = tex;
+        cloudMat.needsUpdate = true;
+      }, undefined, function() {});
+    }
+
+    /* --------------------------------------------------------------------------
+       Orbital Satellite & Trajectory Line (Matches master screenshot!)
+       -------------------------------------------------------------------------- */
+    function createSatelliteOrbit() {
+      // 3D curved trajectory cutting across upper atmosphere
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-3.4, -1.4, 1.0),
+        new THREE.Vector3(-1.8, -0.6, 1.4),
+        new THREE.Vector3(-0.35, 0.08, 1.3),
+        new THREE.Vector3(1.2, 0.05, 1.0),
+        new THREE.Vector3(3.2, -0.35, 0.5)
+      ]);
+
+      const points = curve.getPoints(90);
+      const orbitGeo = new THREE.BufferGeometry().setFromPoints(points);
+
+      const orbitMat = new THREE.LineDashedMaterial({
+        color: 0x9be8ff,
+        linewidth: 1,
+        scale: 1,
+        dashSize: 0.1,
+        gapSize: 0.05,
+        transparent: true,
+        opacity: 0.6
+      });
+
+      orbitLine = new THREE.Line(orbitGeo, orbitMat);
+      orbitLine.computeLineDistances();
+      scene.add(orbitLine);
+
+      // Build satellite model (ISS style)
+      function buildSatelliteMesh(scale = 1.0) {
+        const group = new THREE.Group();
+
+        // Main body
+        const bodyGeo = new THREE.BoxGeometry(0.04, 0.04, 0.08);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xedf4ff, metalness: 0.9, roughness: 0.15 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        group.add(body);
+
+        // Solar panels
+        const panelGeo = new THREE.BoxGeometry(0.18, 0.005, 0.05);
+        const panelMat = new THREE.MeshStandardMaterial({ color: 0x184878, metalness: 0.8, roughness: 0.25 });
+        
+        const leftPanel = new THREE.Mesh(panelGeo, panelMat);
+        leftPanel.position.set(-0.11, 0, 0);
+        group.add(leftPanel);
+
+        const rightPanel = new THREE.Mesh(panelGeo, panelMat);
+        rightPanel.position.set(0.11, 0, 0);
+        group.add(rightPanel);
+
+        // Communications Dish
+        const dishGeo = new THREE.ConeGeometry(0.02, 0.015, 8, 1, true);
+        const dishMat = new THREE.MeshStandardMaterial({ color: 0xffd166, metalness: 0.7, roughness: 0.3 });
+        const dish = new THREE.Mesh(dishGeo, dishMat);
+        dish.position.set(0, 0.028, 0);
+        dish.rotation.x = Math.PI;
+        group.add(dish);
+
+        // Beacon LED
+        const beaconGeo = new THREE.SphereGeometry(0.01, 6, 6);
+        const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00e699 });
+        const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+        beacon.position.set(0, -0.025, 0.035);
+        group.add(beacon);
+
+        group.scale.set(scale, scale, scale);
+        return group;
+      }
+
+      // Satellite 1: Primary satellite prominent at center-limb
+      satelliteMesh1 = buildSatelliteMesh(1.15);
+      satelliteMesh1.curve = curve;
+      satelliteMesh1.progress = 0.52; // Matches master screenshot position!
+      scene.add(satelliteMesh1);
+
+      // Satellite 2: Trailing secondary satellite near lower-left
+      satelliteMesh2 = buildSatelliteMesh(0.85);
+      satelliteMesh2.curve = curve;
+      satelliteMesh2.progress = 0.18; // Matches master screenshot position!
+      scene.add(satelliteMesh2);
+    }
+
+    /* --------------------------------------------------------------------------
+       Independent Animation Loop (Continues smoothly during page scroll)
+       -------------------------------------------------------------------------- */
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+
+      // Earth rotates continuously around its axis
+      // Scrolling DOES NOT control or reset this rotation
+      if (earthMesh) {
+        earthMesh.rotation.y += 0.03 * delta;
+      }
+
+      // Clouds rotate with subtle differential velocity
+      if (cloudMesh) {
+        cloudMesh.rotation.y += 0.036 * delta;
+      }
+
+      // Satellites glide along orbital trajectory
+      [satelliteMesh1, satelliteMesh2].forEach((sat) => {
+        if (sat && sat.curve) {
+          sat.progress += 0.011 * delta;
+          if (sat.progress > 1.0) sat.progress = 0.0;
+
+          const pos = sat.curve.getPoint(sat.progress);
+          const tangent = sat.curve.getTangent(sat.progress);
+
+          sat.position.copy(pos);
+          sat.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
+        }
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initThree);
+    } else {
+      initThree();
+    }
+
+
+    /* ==========================================================================
+       2. PROCEDURAL HIGH-QUALITY SCIENTIFIC ARTWORK GENERATOR
+       Renders crisp, realistic canvas graphics for all cards & news panels
+       ========================================================================== */
+    function drawArt(canvasId, drawerFn) {
+      const c = document.getElementById(canvasId);
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const w = c.width;
+      const h = c.height;
+      drawerFn(ctx, w, h);
+    }
+
+    function initArtworkCanvases() {
+      // News 1: Blue Earth Horizon
+      drawArt('news-canvas-1', (ctx, w, h) => {
+        ctx.fillStyle = '#050c18';
+        ctx.fillRect(0, 0, w, h);
+        const grad = ctx.createRadialGradient(w*0.5, h*1.4, 10, w*0.5, h*1.4, w*0.8);
+        grad.addColorStop(0, '#3888cc');
+        grad.addColorStop(0.6, '#0f3a68');
+        grad.addColorStop(1, '#050c18');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(w*0.5, h*1.4, w*0.75, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#7be0ff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      });
+
+      // News 1 Badge: Spiral Galaxy
+      drawArt('news-badge-1', (ctx, w, h) => {
+        ctx.fillStyle = '#03060f';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#9bd0ff';
+        for(let i=0; i<30; i++) {
+          const a = i * 0.3;
+          const r = i * 0.8;
+          ctx.fillRect(w/2 + Math.cos(a)*r, h/2 + Math.sin(a)*r*0.5, 1.5, 1.5);
+          ctx.fillRect(w/2 - Math.cos(a)*r, h/2 - Math.sin(a)*r*0.5, 1.5, 1.5);
+        }
+      });
+
+      // News 2: Fiery Solar/Nebula event
+      drawArt('news-canvas-2', (ctx, w, h) => {
+        const grad = ctx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, '#5a1e05');
+        grad.addColorStop(0.5, '#ad4b0d');
+        grad.addColorStop(1, '#070b14');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#ffaa33';
+        ctx.beginPath();
+        ctx.arc(w*0.3, h*0.5, 16, 0, Math.PI*2);
+        ctx.fill();
+      });
+
+      // News 2 Badge: Comet with streak
+      drawArt('news-badge-2', (ctx, w, h) => {
+        ctx.fillStyle = '#040912';
+        ctx.fillRect(0, 0, w, h);
+        const streak = ctx.createLinearGradient(0, h, w, 0);
+        streak.addColorStop(0, 'rgba(0, 230, 153, 0.8)');
+        streak.addColorStop(1, 'transparent');
+        ctx.strokeStyle = streak;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(8, h - 8);
+        ctx.lineTo(w - 6, 6);
+        ctx.stroke();
+      });
+
+      // News 3: Planetary alignment
+      drawArt('news-canvas-3', (ctx, w, h) => {
+        ctx.fillStyle = '#040812';
+        ctx.fillRect(0, 0, w, h);
+        const planets = [
+          { x: 18, y: h/2, r: 8, col: '#ffaa33' },
+          { x: 42, y: h/2, r: 5, col: '#64d2ff' },
+          { x: 68, y: h/2, r: 6, col: '#d98236' }
+        ];
+        planets.forEach(p => {
+          ctx.fillStyle = p.col;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+          ctx.fill();
+        });
+      });
+
+      // News 3 Badge: Galaxy
+      drawArt('news-badge-3', (ctx, w, h) => {
+        ctx.fillStyle = '#02050c';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#c7b3ff';
+        ctx.beginPath();
+        ctx.ellipse(w/2, h/2, 12, 6, 0.4, 0, Math.PI*2);
+        ctx.fill();
+      });
+
+      // --- FEATURE CARDS SET 1 (Master Reference Exact Match!) ---
+
+      // Card 1: EXOPLANETS (Distant gas giant world + twin glowing stars)
+      drawArt('art-exoplanets', (ctx, w, h) => {
+        ctx.fillStyle = '#02050e';
+        ctx.fillRect(0, 0, w, h);
+        
+        // Stars in space
+        for (let i = 0; i < 40; i++) {
+          ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.75})`;
+          ctx.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2);
+        }
+
+        // Primary Twin Star (Warm White Corona)
+        const starGrad = ctx.createRadialGradient(w * 0.84, h * 0.36, 1, w * 0.84, h * 0.36, 26);
+        starGrad.addColorStop(0, '#ffffff');
+        starGrad.addColorStop(0.25, '#ffe566');
+        starGrad.addColorStop(0.6, 'rgba(255, 140, 30, 0.45)');
+        starGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = starGrad;
+        ctx.beginPath();
+        ctx.arc(w * 0.84, h * 0.36, 26, 0, Math.PI*2);
+        ctx.fill();
+
+        // Secondary Companion Star
+        ctx.fillStyle = '#ffeaa0';
+        ctx.beginPath();
+        ctx.arc(w * 0.7, h * 0.5, 3.2, 0, Math.PI*2);
+        ctx.fill();
+
+        // Exoplanet Sphere (Deep blue-teal gas giant with atmospheric crescent)
+        const pGrad = ctx.createRadialGradient(w * 0.42, h * 0.54, 3, w * 0.36, h * 0.62, 42);
+        pGrad.addColorStop(0, '#4aa4d8');
+        pGrad.addColorStop(0.3, '#1c4768');
+        pGrad.addColorStop(0.8, '#081422');
+        pGrad.addColorStop(1, '#030810');
+        ctx.fillStyle = pGrad;
+        ctx.beginPath();
+        ctx.arc(w * 0.38, h * 0.58, 38, 0, Math.PI*2);
+        ctx.fill();
+
+        // Glowing Cyan Atmospheric Limb
+        ctx.strokeStyle = '#8ee4ff';
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        ctx.arc(w * 0.38, h * 0.58, 38, -Math.PI*0.35, Math.PI*0.38);
+        ctx.stroke();
+      });
+
+      // Card 2: SOLAR ACTIVITY (Blazing turbulent Sun flare prominence)
+      drawArt('art-solar-activity', (ctx, w, h) => {
+        ctx.fillStyle = '#0a0301';
+        ctx.fillRect(0, 0, w, h);
+
+        // Core Sun Fire
+        const sunGrad = ctx.createRadialGradient(w * 0.82, h * 0.5, 5, w * 0.82, h * 0.5, 80);
+        sunGrad.addColorStop(0, '#ffffff');
+        sunGrad.addColorStop(0.18, '#ffea55');
+        sunGrad.addColorStop(0.48, '#ff5500');
+        sunGrad.addColorStop(0.85, '#771100');
+        sunGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = sunGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Massive Coronal Prominence Loop
+        ctx.strokeStyle = '#ffdd44';
+        ctx.lineWidth = 4.2;
+        ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.68, h * 0.14);
+        ctx.bezierCurveTo(w * 0.12, h * 0.22, w * 0.2, h * 0.8, w * 0.72, h * 0.9);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Coronal plasma filaments
+        ctx.strokeStyle = 'rgba(255, 200, 80, 0.7)';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.75, h * 0.28);
+        ctx.quadraticCurveTo(w * 0.32, h * 0.44, w * 0.78, h * 0.72);
+        ctx.stroke();
+      });
+
+      // Card 3: SPACE MISSIONS (Mars Rover on red Martian landscape)
+      drawArt('art-space-missions', (ctx, w, h) => {
+        // Dusky Martian Sky Gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+        skyGrad.addColorStop(0, '#4e2318');
+        skyGrad.addColorStop(0.55, '#853e26');
+        skyGrad.addColorStop(1, '#b05434');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Red Terrain Dunes & Rocks
+        ctx.fillStyle = '#6b2e1a';
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.65);
+        ctx.quadraticCurveTo(w * 0.42, h * 0.55, w, h * 0.68);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.fill();
+
+        // Foreground Terrain
+        ctx.fillStyle = '#542212';
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.76);
+        ctx.quadraticCurveTo(w * 0.6, h * 0.7, w, h * 0.84);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.fill();
+
+        // Rover Silhouette (Perseverance style with mast and wheels)
+        ctx.fillStyle = '#1c100a';
+        ctx.fillRect(w * 0.42, h * 0.58, 40, 17); // Body
+        ctx.fillRect(w * 0.65, h * 0.38, 3.5, 23); // Mast
+        ctx.fillRect(w * 0.6, h * 0.36, 12, 7);  // SuperCam head
+        ctx.fillRect(w * 0.33, h * 0.54, 11, 4.5); // Robotic Arm
+
+        // Rocker-Bogie 6 Wheels
+        ctx.beginPath();
+        ctx.arc(w * 0.44, h * 0.82, 6.5, 0, Math.PI*2);
+        ctx.arc(w * 0.61, h * 0.82, 6.5, 0, Math.PI*2);
+        ctx.arc(w * 0.78, h * 0.82, 6.5, 0, Math.PI*2);
+        ctx.fill();
+      });
+
+      // Card 4: CONSTELLATIONS (Star charts with blue celestial grid lines)
+      drawArt('art-constellations', (ctx, w, h) => {
+        ctx.fillStyle = '#030915';
+        ctx.fillRect(0, 0, w, h);
+
+        // Faint Coordinate Rings & Axes
+        ctx.strokeStyle = 'rgba(70, 140, 220, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.5, 56, 0, Math.PI * 2);
+        ctx.arc(w * 0.5, h * 0.5, 30, 0, Math.PI * 2);
+        ctx.moveTo(0, h * 0.5); ctx.lineTo(w, h * 0.5);
+        ctx.moveTo(w * 0.5, 0); ctx.lineTo(w * 0.5, h);
+        ctx.stroke();
+
+        // Constellation Stars
+        const stars = [
+          [28, 30], [52, 44], [86, 42], [112, 28],
+          [120, 58], [94, 70], [64, 66]
+        ];
+
+        // Connecting Star Lines
+        ctx.strokeStyle = 'rgba(120, 210, 255, 0.82)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        stars.forEach((s, idx) => {
+          if (idx === 0) ctx.moveTo(s[0], s[1]);
+          else ctx.lineTo(s[0], s[1]);
+        });
+        ctx.stroke();
+
+        // Glowing Star Nodes
+        ctx.fillStyle = '#ffffff';
+        stars.forEach(s => {
+          ctx.beginPath();
+          ctx.arc(s[0], s[1], 3.0, 0, Math.PI*2);
+          ctx.fill();
+        });
+      });
+
+      // Card 5: DEEP SPACE (Pillars of Creation / Golden Teal Nebula)
+      drawArt('art-deep-space', (ctx, w, h) => {
+        ctx.fillStyle = '#02050b';
+        ctx.fillRect(0, 0, w, h);
+
+        // Teal & Gold Gas Clouds
+        const nebGrad = ctx.createRadialGradient(w * 0.46, h * 0.6, 6, w * 0.46, h * 0.6, 75);
+        nebGrad.addColorStop(0, '#4fb5aa');
+        nebGrad.addColorStop(0.38, '#b27a32');
+        nebGrad.addColorStop(0.72, '#282b54');
+        nebGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = nebGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Towering Dust Columns (Pillars)
+        ctx.fillStyle = '#0d0907';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.32, h);
+        ctx.lineTo(w * 0.36, h * 0.32);
+        ctx.quadraticCurveTo(w * 0.44, h * 0.28, w * 0.48, h * 0.48);
+        ctx.lineTo(w * 0.58, h * 0.24);
+        ctx.quadraticCurveTo(w * 0.66, h * 0.22, w * 0.68, h * 0.58);
+        ctx.lineTo(w * 0.82, h);
+        ctx.fill();
+      });
+
+      // Card 6: COSMIC TIMELINE (Gradient spectrum bar from Big Bang)
+      drawArt('art-cosmic-timeline', (ctx, w, h) => {
+        ctx.fillStyle = '#04060c';
+        ctx.fillRect(0, 0, w, h);
+
+        // Timeline Spectrum Bar
+        const barGrad = ctx.createLinearGradient(12, 0, w - 12, 0);
+        barGrad.addColorStop(0, '#ff4400');    // Big Bang
+        barGrad.addColorStop(0.25, '#ffaa00');  // Inflation & Recombination
+        barGrad.addColorStop(0.5, '#00d4ff');   // Cosmic Dawn & First Stars
+        barGrad.addColorStop(0.75, '#4060ff');  // Galaxy Evolution
+        barGrad.addColorStop(1, '#9900ff');     // Dark Energy Era
+
+        ctx.fillStyle = barGrad;
+        ctx.fillRect(12, h * 0.58, w - 24, 11);
+
+        // Epoch Milestones
+        [24, w * 0.38, w * 0.68, w - 24].forEach((x) => {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(x, h * 0.63, 4.5, 0, Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, h * 0.34);
+          ctx.lineTo(x, h * 0.55);
+          ctx.stroke();
+        });
+      });
+
+      // --- FEATURE CARDS SET 0 (Solar System, Predictions, Asteroids, etc.) ---
+
+      drawArt('art-solar-system', (ctx, w, h) => {
+        ctx.fillStyle = '#040a15';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#ffaa22';
+        ctx.beginPath(); ctx.arc(10, h/2, 28, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        [50, 75, 105, 135].forEach((rad, i) => {
+          ctx.beginPath(); ctx.arc(10, h/2, rad, 0, Math.PI*2); ctx.stroke();
+          ctx.fillStyle = ['#99ddff', '#ff6633', '#eedd88', '#55aacc'][i];
+          ctx.beginPath(); ctx.arc(10 + Math.cos(i*1.2)*rad, h/2 + Math.sin(i*1.2)*rad, 3.5, 0, Math.PI*2); ctx.fill();
+        });
+      });
+
+      drawArt('art-predictions', (ctx, w, h) => {
+        ctx.fillStyle = '#020713';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3;
+          const px = w/2 + Math.cos(a) * 22;
+          const py = h/2 + Math.sin(a) * 22;
+          ctx.strokeRect(px - 7, py - 7, 14, 14);
+        }
+      });
+
+      drawArt('art-asteroid', (ctx, w, h) => {
+        ctx.fillStyle = '#080404';
+        ctx.fillRect(0, 0, w, h);
+        const flame = ctx.createLinearGradient(w, 0, w*0.2, h*0.8);
+        flame.addColorStop(0, '#ff3300');
+        flame.addColorStop(0.6, '#ffaa00');
+        flame.addColorStop(1, 'transparent');
+        ctx.strokeStyle = flame;
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(w, 10); ctx.lineTo(w*0.3, h*0.75); ctx.stroke();
+        ctx.fillStyle = '#665544';
+        ctx.beginPath(); ctx.arc(w*0.3, h*0.75, 12, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-galaxies', (ctx, w, h) => {
+        ctx.fillStyle = '#02050f';
+        ctx.fillRect(0, 0, w, h);
+        const gGrad = ctx.createRadialGradient(w/2, h/2, 2, w/2, h/2, 48);
+        gGrad.addColorStop(0, '#ffffff');
+        gGrad.addColorStop(0.3, '#75b5ff');
+        gGrad.addColorStop(0.8, '#2a3a60');
+        gGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = gGrad;
+        ctx.beginPath(); ctx.ellipse(w/2, h/2, 48, 22, -0.4, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-explorer', (ctx, w, h) => {
+        ctx.fillStyle = '#020713';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#64d2ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(w*0.25, h*0.25, w*0.5, h*0.5);
+        ctx.fillStyle = '#00e699';
+        ctx.beginPath(); ctx.arc(w*0.5, h*0.5, 4, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-more', (ctx, w, h) => {
+        ctx.fillStyle = '#03060f';
+        ctx.fillRect(0, 0, w, h);
+        for(let i=0; i<45; i++) {
+          ctx.fillStyle = `rgba(255,255,255,${Math.random()})`;
+          ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+        }
+      });
+
+      // --- FEATURE CARDS SET 2 (Black holes, Nebulae, Supernovae, etc.) ---
+
+      drawArt('art-black-holes', (ctx, w, h) => {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#ff9900';
+        ctx.lineWidth = 6;
+        ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur = 18;
+        ctx.beginPath(); ctx.ellipse(w/2, h/2, 48, 14, 0.2, 0, Math.PI*2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.arc(w/2, h/2, 18, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-nebulae', (ctx, w, h) => {
+        ctx.fillStyle = '#04030a';
+        ctx.fillRect(0, 0, w, h);
+        const grad = ctx.createRadialGradient(w/2, h/2, 5, w/2, h/2, 42);
+        grad.addColorStop(0, '#ff3388');
+        grad.addColorStop(0.5, '#6622cc');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(w/2, h/2, 40, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-supernovae', (ctx, w, h) => {
+        ctx.fillStyle = '#050308';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(w/2, h/2, 24, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(w/2, h/2, 5, 0, Math.PI*2); ctx.fill();
+      });
+
+      drawArt('art-star-clusters', (ctx, w, h) => {
+        ctx.fillStyle = '#030510';
+        ctx.fillRect(0, 0, w, h);
+        for(let i=0; i<70; i++) {
+          const r = Math.random()*28;
+          const a = Math.random()*Math.PI*2;
+          ctx.fillStyle = '#ffeedd';
+          ctx.fillRect(w/2 + Math.cos(a)*r, h/2 + Math.sin(a)*r, 1.5, 1.5);
+        }
+      });
+
+      drawArt('art-spacecraft', (ctx, w, h) => {
+        ctx.fillStyle = '#02050c';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#ddeeff';
+        ctx.beginPath(); ctx.arc(w*0.5, h*0.5, 18, Math.PI*0.8, Math.PI*2.2); ctx.fill();
+        ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(w*0.5, h*0.5); ctx.lineTo(w*0.8, h*0.2); ctx.stroke();
+      });
+
+      drawArt('art-future-discovery', (ctx, w, h) => {
+        ctx.fillStyle = '#030814';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(100, 210, 255, 0.4)';
+        ctx.lineWidth = 1.5;
+        for(let r=10; r<=45; r+=10) {
+          ctx.beginPath(); ctx.arc(w*0.5, h*0.5, r, 0, Math.PI*2); ctx.stroke();
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initArtworkCanvases);
+    } else {
+      initArtworkCanvases();
+    }
+
+
+    /* ==========================================================================
+       3. SCROLL-CONTROLLED CARD CONTENT (FIXED VIEWPORT CAROUSEL)
+       Directional upward/downward transitions, scroll wheel debouncing,
+       scrollbar drag interaction, and category indicator sync.
+       ========================================================================== */
+    let currentSetIndex = 1; // Default to Set 1 (matches master screenshot!)
+    const totalSets = 3;
+    let isTransitioning = false;
+
+    const setDots = document.querySelectorAll('.set-dot');
+    const scrollbarThumb = document.getElementById('scrollbar-thumb');
+    const panelTitle = document.getElementById('feature-panel-title');
+
+    const setTitles = [
+      "SOLAR SYSTEM & EXPLORATION",
+      "FEATURED EVENTS",
+      "DEEP COSMOS & HORIZONS"
+    ];
+
+    function showCardSet(newIndex, direction = 'down') {
+      if (newIndex === currentSetIndex && document.getElementById(`card-set-${newIndex}`).classList.contains('active')) {
+        return;
+      }
+      if (isTransitioning) return;
+      isTransitioning = true;
+
+      const oldSet = document.getElementById(`card-set-${currentSetIndex}`);
+      const newSet = document.getElementById(`card-set-${newIndex}`);
+
+      // Apply directional exit class
+      oldSet.classList.remove('active');
+      if (direction === 'down') {
+        oldSet.classList.add('exit-up');
+        newSet.classList.remove('exit-up');
+        newSet.classList.add('exit-down');
+      } else {
+        oldSet.classList.add('exit-down');
+        newSet.classList.remove('exit-down');
+        newSet.classList.add('exit-up');
+      }
+
+      // Force reflow
+      void newSet.offsetWidth;
+
+      // Animate new set in
+      newSet.classList.remove('exit-up', 'exit-down');
+      newSet.classList.add('active');
+
+      // Update indicator dots
+      setDots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === newIndex);
+      });
+
+      // Update Scrollbar Thumb Position
+      if (scrollbarThumb) {
+        scrollbarThumb.style.top = `${(newIndex / totalSets) * 100}%`;
+      }
+
+      // Update panel title with subtle crossfade
+      if (panelTitle) {
+        panelTitle.style.opacity = '0';
+        setTimeout(() => {
+          panelTitle.textContent = setTitles[newIndex];
+          panelTitle.style.opacity = '1';
+        }, 200);
+      }
+
+      currentSetIndex = newIndex;
+
+      setTimeout(() => {
+        oldSet.classList.remove('exit-up', 'exit-down');
+        isTransitioning = false;
+      }, 500);
+    }
+
+    // Scroll Wheel Event Listener
+    let wheelTimeout;
+    function handleWheelScroll(e) {
+      const delta = e.deltaY;
+      if (Math.abs(delta) < 25) return;
+
+      if (wheelTimeout) return;
+      wheelTimeout = setTimeout(() => { wheelTimeout = null; }, 400);
+
+      if (delta > 0) {
+        if (currentSetIndex < totalSets - 1) {
+          showCardSet(currentSetIndex + 1, 'down');
+        } else {
+          showCardSet(0, 'down');
+        }
+      } else {
+        if (currentSetIndex > 0) {
+          showCardSet(currentSetIndex - 1, 'up');
+        } else {
+          showCardSet(totalSets - 1, 'up');
+        }
+      }
+    }
+
+    const featureViewport = document.getElementById('feature-viewport');
+    if (featureViewport) {
+      featureViewport.addEventListener('wheel', handleWheelScroll, { passive: true });
+    }
+
+    // Also support global page scrolling to drive the dashboard card sets!
+    window.addEventListener('wheel', (e) => {
+      if (!e.target.closest('#mission-modal')) {
+        handleWheelScroll(e);
+      }
+    }, { passive: true });
+
+    // Touch Swipe Gesture Support for mobile & tablets
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffY = touchStartY - touchEndY;
+      if (Math.abs(diffY) > 40) {
+        if (diffY > 0) {
+          showCardSet((currentSetIndex + 1) % totalSets, 'down');
+        } else {
+          showCardSet((currentSetIndex - 1 + totalSets) % totalSets, 'up');
+        }
+      }
+    }, { passive: true });
+
+    // Click indicators directly
+    setDots.forEach((dot) => {
+      dot.addEventListener('click', (e) => {
+        const targetIndex = parseInt(e.currentTarget.getAttribute('data-set'), 10);
+        const dir = targetIndex > currentSetIndex ? 'down' : 'up';
+        showCardSet(targetIndex, dir);
+      });
+    });
+
+    // Click on Scrollbar Track to jump
+    const scrollbarTrack = document.getElementById('scrollbar-track');
+    if (scrollbarTrack) {
+      scrollbarTrack.addEventListener('click', (e) => {
+        const rect = scrollbarTrack.getBoundingClientRect();
+        const clickRatio = (e.clientY - rect.top) / rect.height;
+        let targetIndex = Math.floor(clickRatio * totalSets);
+        targetIndex = Math.max(0, Math.min(totalSets - 1, targetIndex));
+        const dir = targetIndex > currentSetIndex ? 'down' : 'up';
+        showCardSet(targetIndex, dir);
+      });
+    }
+
+    // Keyboard Arrow Keys (Up/Down) navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        const next = (currentSetIndex + 1) % totalSets;
+        showCardSet(next, 'down');
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        const prev = (currentSetIndex - 1 + totalSets) % totalSets;
+        showCardSet(prev, 'up');
+      }
+    });
+
+
+    /* ==========================================================================
+       4. CARD POINTER INTERACTION (SUBTLE 3D TILT & SPECULAR SHEEN)
+       ========================================================================== */
+    const cards = document.querySelectorAll('.feature-card');
+    cards.forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+
+      card.addEventListener('click', (e) => {
+        const slug = card.getAttribute('data-slug');
+        if (slug === 'asteroid-collision') {
+          e.preventDefault();
+          e.stopPropagation();
+          const m = document.getElementById('mission-modal');
+          if (m) {
+            m.classList.remove('open');
+            m.setAttribute('aria-hidden', 'true');
+            m.style.display = 'none';
+          }
+          if (window.astraCollisionApp) {
+            window.astraCollisionApp.launch();
+          }
+          return;
+        }
+        const title = card.querySelector('.card-title')?.textContent || 'MISSION';
+        const desc = card.querySelector('.card-desc')?.textContent || '';
+        openModal(title, desc, slug);
+      });
+    });
+
+
+    /* ==========================================================================
+       5. INTERACTIVE MISSION DOSSIER / MODAL DIALOG
+       ========================================================================== */
+    const modal = document.getElementById('mission-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalStats = document.getElementById('modal-stats');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalBackBtn = document.getElementById('modal-back-btn');
+    const modalActionBtn = document.getElementById('modal-action-btn');
+
+    const cardDetails = {
+      'exoplanets': {
+        tag: 'DEEP SPACE EXPLORATION',
+        body: "Explore worlds orbiting distant stars outside our Solar System. From scorched 'hot Jupiters' to ocean-covered super-Earths, over 5,600 exoplanets have been confirmed by space telescopes including Kepler, TESS, and James Webb.",
+        stats: [
+          { label: 'Confirmed Worlds', val: '5,632' },
+          { label: 'Habitable Candidates', val: '168' },
+          { label: 'Observation Depth', val: '28,000 ly' }
+        ],
+        action: 'Launch Exoplanet Explorer'
+      },
+      'solar-activity': {
+        tag: 'HELIOPHYSICS DIVISION',
+        body: "Monitor the 11-year solar cycle, coronal mass ejections (CMEs), and geomagnetic solar storms in real-time using NASA SDO and ESA Solar Orbiter telemetry.",
+        stats: [
+          { label: 'Current Sunspot No.', val: '142' },
+          { label: 'Solar Wind Speed', val: '438 km/s' },
+          { label: 'Cycle Status', val: 'Solar Max 25' }
+        ],
+        action: 'Analyze Solar Telemetry'
+      },
+      'space-missions': {
+        tag: 'EXPLORATION CHRONICLES',
+        body: "Follow robotic probes, Mars rovers, and crewed lunar missions. Review Artemis flight paths, Perseverance rover rock samples, and the Europa Clipper trajectory.",
+        stats: [
+          { label: 'Active Missions', val: '44' },
+          { label: 'Furthest Probe', val: '24.2B km' },
+          { label: 'Crew in Orbit', val: '10' }
+        ],
+        action: 'View Mission Trajectories'
+      },
+      'constellations': {
+        tag: 'CELESTIAL CARTOGRAPHY',
+        body: "Interactive star charts and cultural constellation lore. Trace ancient astronomical sky maps and align them with modern 3D Gaia stellar velocity vectors.",
+        stats: [
+          { label: 'Mapped Constellations', val: '88 IAU' },
+          { label: 'Catalogued Stars', val: '1.8 Billion' },
+          { label: 'Epoch Reference', val: 'J2000.0' }
+        ],
+        action: 'Open Interactive Sky Map'
+      },
+      'deep-space': {
+        tag: 'ASTROPHYSICAL PHENOMENA',
+        body: "Venture past stellar nurseries, planetary nebulae, and ancient globular clusters. High-resolution multispectral imagery captured in infrared, optical, and X-ray.",
+        stats: [
+          { label: 'Messier Objects', val: '110' },
+          { label: 'Deepest Field', val: '13.4B yrs' },
+          { label: 'Star Clusters', val: '150+' }
+        ],
+        action: 'Explore Deep Nebulae'
+      },
+      'cosmic-timeline': {
+        tag: 'COSMOLOGY & EVOLUTION',
+        body: "Journey from the Big Bang 13.8 billion years ago, through Cosmic Dawn and the reionization epoch, to the modern era of galaxy clusters and dark energy expansion.",
+        stats: [
+          { label: 'Universe Age', val: '13.787 Gyr' },
+          { label: 'Hubble Constant', val: '67.4 km/s/Mpc' },
+          { label: 'CMB Temp', val: '2.725 K' }
+        ],
+        action: 'Traverse Cosmic Eras'
+      }
+    };
+
+    function openModal(title, desc, slug) {
+      if (slug === 'asteroid-collision') return;
+      const data = cardDetails[slug] || {
+        tag: 'ASTRA RECONNAISSANCE',
+        body: desc + ' Comprehensive interactive module prepared for planetary telemetry and simulation.',
+        stats: [
+          { label: 'Status', val: 'Online' },
+          { label: 'Telemetry', val: 'Active' },
+          { label: 'Latency', val: '1.2s LEO' }
+        ],
+        action: `Explore ${title}`
+      };
+
+      document.getElementById('modal-tag').textContent = data.tag;
+      modalTitle.textContent = title;
+      modalBody.textContent = data.body;
+      modalActionBtn.textContent = `${data.action} →`;
+
+      modalStats.innerHTML = data.stats.map(s => `
+        <div class="stat-box">
+          <span class="stat-label">${s.label}</span>
+          <span class="stat-value">${s.val}</span>
+        </div>
+      `).join('');
+
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    modalCloseBtn?.addEventListener('click', closeModal);
+    modalBackBtn?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.querySelectorAll('.news-item, .upcoming-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const title = item.querySelector('.news-title, .upcoming-title')?.textContent || 'ASTRONOMY UPDATE';
+        openModal(title, 'Observational bulletins and telemetry provided by global astronomical observatories and satellite constellations.', 'news');
+      });
+    });
+
+    // Start Exploring CTA click
+    document.getElementById('start-explore-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showCardSet(1, 'down');
+      const firstCard = document.querySelector('#card-set-1 .feature-card');
+      firstCard?.scrollIntoView({ behavior: 'smooth' });
+      firstCard?.click();
+    });
+
+
+    /* ==========================================================================
+       6. AMBIENT AUDIO SYNTHESIZER (WEB AUDIO API - SUBTLE ORBITAL DRONE)
+       ========================================================================== */
+    let audioCtx, osc, filter, gainNode;
+    let isAudioPlaying = false;
+    const audioBtn = document.getElementById('audio-toggle');
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+
+        osc = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        filter = audioCtx.createBiquadFilter();
+        gainNode = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, audioCtx.currentTime);
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(110, audioCtx.currentTime);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(160, audioCtx.currentTime);
+
+        gainNode.gain.setValueAtTime(0.045, audioCtx.currentTime);
+
+        osc.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start();
+        osc2.start();
+        isAudioPlaying = true;
+        audioBtn.style.color = 'var(--accent-cyan)';
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          isAudioPlaying = true;
+          audioBtn.style.color = 'var(--accent-cyan)';
+        } else if (audioCtx.state === 'running') {
+          audioCtx.suspend();
+          isAudioPlaying = false;
+          audioBtn.style.color = 'var(--text-muted)';
+        }
+      }
+    }
+
+    audioBtn?.addEventListener('click', toggleAudio);
+
+    // Fullscreen Toggle
+    const fsBtn = document.getElementById('fs-toggle');
+    fsBtn?.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+  })();
+  </script>
+
+  <!-- ASTRA Asteroid Collision Physics, Data & Simulation Engines -->
+  <script src="js/collision-physics.js"></script>
+  <script src="js/collision-nasa-data.js"></script>
+  <script src="js/collision-map.js"></script>
+  <script src="js/collision-sim3d.js"></script>
+  <script src="js/collision-app.js"></script>
+</body>
+</html>
